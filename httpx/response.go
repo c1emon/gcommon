@@ -1,5 +1,7 @@
 package httpx
 
+import "fmt"
+
 type Response struct {
 	Code    int    `json:"code"`
 	Message string `json:"message,omitempty"`
@@ -33,5 +35,21 @@ func NewResponse(c int) *Response {
 }
 
 func ResponseOK() *Response {
-	return NewResponse(0)
+	return NewResponse(200)
+}
+
+func ResponseBadParam(param, reason string) *Response {
+	return NewResponse(1001).WithMessage(fmt.Sprintf("bad param [%s]: %s", param, reason))
+}
+
+func ResponseNotFound(id string) *Response {
+	return NewResponse(1002).WithMessage(fmt.Sprintf("[%s] not found", id))
+}
+
+func ResponseDuplicateKey(key string) *Response {
+	return NewResponse(1003).WithMessage(fmt.Sprintf("duplicate key [%s]", key))
+}
+
+func ResponseNotAllowed(res string) *Response {
+	return NewResponse(1004).WithMessage(fmt.Sprintf("[%s] not allowed", res))
 }
