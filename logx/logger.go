@@ -11,7 +11,17 @@ type logOptions struct {
 	values any
 }
 
-func readOptions(opts []util.Option[logOptions]) *logOptions {
+type logOption util.Option[logOptions]
+
+func (o logOptions) GetCtx() context.Context {
+	return o.ctx
+}
+
+func (o logOptions) GetValues() any {
+	return o.values
+}
+
+func readOptions(opts []logOption) *logOptions {
 	lo := &logOptions{
 		ctx:    context.TODO(),
 		values: nil,
@@ -24,14 +34,14 @@ func readOptions(opts []util.Option[logOptions]) *logOptions {
 	return lo
 }
 
-func WithContext(ctx context.Context) util.Option[logOptions] {
+func WithContext(ctx context.Context) logOption {
 	return util.WrapFuncOption[logOptions](
 		func(lo *logOptions) {
 			lo.ctx = ctx
 		})
 }
 
-func WithValues(values any) util.Option[logOptions] {
+func WithValues(values any) logOption {
 	return util.WrapFuncOption[logOptions](
 		func(lo *logOptions) {
 			lo.values = values
@@ -47,15 +57,15 @@ type Logger interface {
 	Fatal(format string, values ...any)
 	Panic(format string, values ...any)
 
-	TraceWith(opts []util.Option[logOptions], format string, values ...any)
-	DebugWith(opts []util.Option[logOptions], format string, values ...any)
-	InfoWith(opts []util.Option[logOptions], format string, values ...any)
-	WarnWith(opts []util.Option[logOptions], format string, values ...any)
-	ErrorWith(opts []util.Option[logOptions], format string, values ...any)
-	FatalWith(opts []util.Option[logOptions], format string, values ...any)
-	PanicWith(opts []util.Option[logOptions], format string, values ...any)
+	TraceWith(opts []logOption, format string, values ...any)
+	DebugWith(opts []logOption, format string, values ...any)
+	InfoWith(opts []logOption, format string, values ...any)
+	WarnWith(opts []logOption, format string, values ...any)
+	ErrorWith(opts []logOption, format string, values ...any)
+	FatalWith(opts []logOption, format string, values ...any)
+	PanicWith(opts []logOption, format string, values ...any)
 }
 
 type LoggerFactory interface {
-	Get(service string) Logger
+	Get(name string) Logger
 }
