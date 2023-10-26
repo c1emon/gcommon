@@ -8,7 +8,7 @@ import (
 
 type logOptions struct {
 	ctx    context.Context
-	values any
+	values map[string]any
 }
 
 type logOption util.Option[logOptions]
@@ -41,7 +41,7 @@ func WithContext(ctx context.Context) logOption {
 		})
 }
 
-func WithValues(values any) logOption {
+func WithValues(values map[string]any) logOption {
 	return util.WrapFuncOption[logOptions](
 		func(lo *logOptions) {
 			lo.values = values
@@ -49,6 +49,8 @@ func WithValues(values any) logOption {
 }
 
 type Logger interface {
+	GetLevel() Level
+
 	Trace(format string, values ...any)
 	Debug(format string, values ...any)
 	Info(format string, values ...any)
@@ -68,4 +70,5 @@ type Logger interface {
 
 type LoggerFactory interface {
 	Get(name string) Logger
+	GetLevel() Level
 }

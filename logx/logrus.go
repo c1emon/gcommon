@@ -12,7 +12,6 @@ import (
 )
 
 var (
-	cstZone             = time.FixedZone("GMT", 8*3600)
 	debugColorFormatter = color.New(color.FgHiYellow).SprintFunc()
 	infoColorFormatter  = color.New(color.FgGreen).SprintFunc()
 	warnColorFormatter  = color.New(color.FgYellow).SprintFunc()
@@ -20,10 +19,15 @@ var (
 )
 
 var _ Logger = &LogrusLogger{}
+var _ LoggerFactory = &LogrusLoggerFactory{}
 
-func NewLogrusLogger(lv Level) *LogrusLoggerFactory {
+func NewLogrusLoggerFactory(lv Level) *LogrusLoggerFactory {
 	l := &LogrusLoggerFactory{
-		logrus: logrus.New(),
+		logrus:     logrus.New(),
+		timeFormat: "2006-01-02 15:04:05.999",
+		timeZone:   time.FixedZone("GMT", 8*3600),
+		lv:         lv,
+		loggers:    make(map[string]Logger),
 	}
 
 	l.logrus.SetFormatter(l)
@@ -34,14 +38,28 @@ func NewLogrusLogger(lv Level) *LogrusLoggerFactory {
 }
 
 type LogrusLoggerFactory struct {
-	logrus *logrus.Logger
+	logrus     *logrus.Logger
+	timeFormat string
+	timeZone   *time.Location
+	lv         Level
+	loggers    map[string]Logger
 }
 
 func (l *LogrusLoggerFactory) Get(name string) Logger {
-	return &LogrusLogger{
+	if logger, ok := l.loggers[name]; ok {
+		return logger
+	}
+	logger := &LogrusLogger{
 		Entry: logrus.NewEntry(l.logrus),
 		name:  name,
+		lv:    l.lv,
 	}
+	l.loggers[name] = logger
+	return logger
+}
+
+func (l *LogrusLoggerFactory) GetLevel() Level {
+	return l.lv
 }
 
 // Format log format
@@ -59,7 +77,7 @@ func (s *LogrusLoggerFactory) Format(entry *logrus.Entry) ([]byte, error) {
 		colorFormatter = errorColorFormatter
 	}
 
-	timestamp := time.Now().In(cstZone).Format("2006-01-02 15:04:05.999")
+	timestamp := time.Now().In(s.timeZone).Format(s.timeFormat)
 	msg := fmt.Sprintf("%s [%s] -- %s\n",
 		timestamp,
 		colorFormatter(strings.ToUpper(entry.Level.String())),
@@ -74,6 +92,11 @@ func (s *LogrusLoggerFactory) Format(entry *logrus.Entry) ([]byte, error) {
 type LogrusLogger struct {
 	*logrus.Entry
 	name string
+	lv   Level
+}
+
+func (l *LogrusLogger) GetLevel() Level {
+	return l.lv
 }
 
 // Debug implements Logger.
