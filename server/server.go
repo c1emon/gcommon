@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/c1emon/gcommon/logx"
-	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -43,7 +42,7 @@ func newServer() (*Server, error) {
 		childRoutines:    childRoutines,
 		shutdownFn:       shutdownFn,
 		shutdownFinished: make(chan any),
-		log:              logx.GetLogger(),
+		// log:              logx.GetLogger(),
 		// cfg:                cfg,
 		backgroundServices: make([]BackgroundService, 0),
 	}
@@ -55,7 +54,7 @@ type Server struct {
 	context       context.Context
 	shutdownFn    context.CancelFunc
 	childRoutines *errgroup.Group
-	log           *logrus.Logger
+	logger        logx.Logger
 	// cfg              *setting.Config
 	shutdownOnce     sync.Once
 	shutdownFinished chan any
@@ -108,16 +107,16 @@ func (s *Server) Run() error {
 			}
 
 			// start service
-			s.log.Debugf("Starting background service: %s", svcName)
+			s.logger.Debug("Starting background service: %s", svcName)
 			err := service.Run(s.context)
 			// Do not return context.Canceled error since errgroup.Group only
 			// returns the first error to the caller - thus we can miss a more
 			// interesting error.
 			if err != nil && !errors.Is(err, context.Canceled) {
-				s.log.Errorf("Stopped background service: %s for %s", "http server", err)
+				s.logger.Error("Stopped background service: %s for %s", "http server", err)
 				return fmt.Errorf("%s run error: %w", "http server", err)
 			}
-			s.log.Debugf("Stopped background service %s for %s", svcName, err)
+			s.logger.Debug("Stopped background service %s for %s", svcName, err)
 			return nil
 		})
 
@@ -132,15 +131,15 @@ func (s *Server) Run() error {
 func (s *Server) Shutdown(ctx context.Context, reason string) error {
 	var err error
 	s.shutdownOnce.Do(func() {
-		s.log.Infof("Shutdown started: %s", reason)
+		s.logger.Info("Shutdown started: %s", reason)
 		// Call cancel func to stop background services.
 		s.shutdownFn()
 		// Wait for server to shut down
 		select {
 		case <-s.shutdownFinished:
-			s.log.Debug("Finished waiting for server to shut down")
+			s.logger.Debug("Finished waiting for server to shut down")
 		case <-ctx.Done():
-			s.log.Warn("Timed out while waiting for server to shut down")
+			s.logger.Warn("Timed out while waiting for server to shut down")
 			err = fmt.Errorf("timeout waiting for shutdown")
 		}
 	})

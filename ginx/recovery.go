@@ -6,12 +6,12 @@ import (
 	"strings"
 
 	"github.com/c1emon/gcommon/errorx"
+	"github.com/c1emon/gcommon/logx"
 	"github.com/gin-gonic/gin"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 )
 
-func Recovery(logger *logrus.Logger) gin.HandlerFunc {
+func Recovery(logger logx.Logger) gin.HandlerFunc {
 
 	return func(c *gin.Context) {
 		defer func() {
@@ -25,13 +25,13 @@ func Recovery(logger *logrus.Logger) gin.HandlerFunc {
 						if strings.Contains(errStr, "broken pipe") || strings.Contains(errStr, "connection reset by peer") {
 							c.Error(err.(error))
 							c.Abort()
-							logger.Warnf("%s", err)
+							logger.Warn("%s", err)
 							return
 						}
 					}
 				}
 				//TODO: add stack trace
-				logger.Errorf("recovered panic: %+v", err)
+				logger.Error("recovered panic: %+v", err)
 				c.Error(errorx.ErrInternal)
 
 			}

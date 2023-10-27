@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sync"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -12,36 +11,53 @@ import (
 	"gorm.io/gorm/utils"
 )
 
-var gormLog *gormLogrus
+var _ gl.Interface = &gormLogger{}
 
-var onceGorm = sync.Once{}
+func NewGormLogger(loggerFactory LoggerFactory) *gormLogger {
 
-type gormLogrus struct {
-	*logrus.Logger
+	return &gormLogger{
+		Logger:                    loggerFactory.Get("gorm_logger"),
+		SlowThreshold:             200 * time.Millisecond,
+		IgnoreRecordNotFoundError: false,
+	}
+}
+
+type gormLogger struct {
+	Logger
 	SlowThreshold             time.Duration
 	IgnoreRecordNotFoundError bool
 }
 
-func (l *gormLogrus) LogMode(level gl.LogLevel) gl.Interface {
-	lv := Gorm2LogrusLogLevel(level)
-	l.Logger.SetLevel(lv)
+func (l *gormLogger) LogMode(level gl.LogLevel) gl.Interface {
+	// lv := Gorm2LogrusLogLevel(level)
+	// l.Logger.SetLevel(lv)
+	l.Logger.Warn("can not change log level logrus logger")
 	return l
 }
 
-func (l *gormLogrus) Info(ctx context.Context, format string, values ...interface{}) {
-	l.Logger.WithContext(ctx).Infof(format, values...)
+func (l *gormLogger) Info(ctx context.Context, format string, values ...interface{}) {
+	opts := make([]logOption, 0)
+	opts = append(opts, WithContext(ctx))
+
+	l.Logger.InfoWith(opts, format, values...)
 }
 
-func (l *gormLogrus) Warn(ctx context.Context, format string, values ...interface{}) {
-	l.Logger.WithContext(ctx).Warnf(format, values...)
+func (l *gormLogger) Warn(ctx context.Context, format string, values ...interface{}) {
+	opts := make([]logOption, 0)
+	opts = append(opts, WithContext(ctx))
+
+	l.Logger.WarnWith(opts, format, values...)
 }
 
-func (l *gormLogrus) Error(ctx context.Context, format string, values ...interface{}) {
-	l.Logger.WithContext(ctx).Errorf(format, values...)
+func (l *gormLogger) Error(ctx context.Context, format string, values ...interface{}) {
+	opts := make([]logOption, 0)
+	opts = append(opts, WithContext(ctx))
+
+	l.Logger.ErrorWith(opts, format, values...)
 }
 
-func (l *gormLogrus) Trace(ctx context.Context, begin time.Time, fc func() (sql string, rowsAffected int64), err error) {
-	if l.Logger.GetLevel() <= logrus.FatalLevel {
+func (l *gormLogger) Trace(ctx context.Context, begin time.Time, fc func() (sql string, rowsAffected int64), err error) {
+	if l.Logger.GetLevel() <= LevelFatal {
 		return
 	}
 
@@ -49,37 +65,38 @@ func (l *gormLogrus) Trace(ctx context.Context, begin time.Time, fc func() (sql 
 	sql, rows := fc()
 	caller := utils.FileWithLineNum()
 
-	fields := logrus.Fields{}
+	fields := make(map[string]any)
 	fields["sql"] = sql
 	fields["elapsed"] = fmt.Sprintf("%d ms", elapsed.Milliseconds())
 	fields["caller"] = caller
 
 	if err != nil && (!errors.Is(err, gl.ErrRecordNotFound) || !l.IgnoreRecordNotFoundError) {
-		l.Logger.WithContext(ctx).WithFields(fields).Errorf("%s", err)
+		opts := make([]logOption, 0)
+		opts = append(opts, WithContext(ctx))
+		opts = append(opts, WithValues(fields))
+
+		l.Logger.ErrorWith(opts, "%s", err)
+
 		return
 	}
 
 	if l.SlowThreshold != 0 && elapsed > l.SlowThreshold {
-		l.Logger.WithContext(ctx).WithFields(fields).Warnf("slow sql (>%dms)", l.SlowThreshold.Milliseconds())
+		opts := make([]logOption, 0)
+		opts = append(opts, WithContext(ctx))
+		opts = append(opts, WithValues(fields))
+
+		l.Logger.WarnWith(opts, "slow sql (>%dms)", l.SlowThreshold.Milliseconds())
 		return
 	}
 
-	if l.Logger.GetLevel() >= logrus.DebugLevel {
-		l.Logger.WithContext(ctx).WithFields(fields).Debugf("exec sql (affect %d rows)", rows)
+	if l.Logger.GetLevel() >= LevelDebug {
+
+		opts := make([]logOption, 0)
+		opts = append(opts, WithContext(ctx))
+		opts = append(opts, WithValues(fields))
+
+		l.Logger.DebugWith(opts, "exec sql (affect %d rows)", rows)
 	}
-}
-
-func GetGormLogrusLogger() *gormLogrus {
-	onceGorm.Do(func() {
-		l := GetLogger()
-		gormLog = &gormLogrus{
-			Logger:                    l,
-			SlowThreshold:             200 * time.Millisecond,
-			IgnoreRecordNotFoundError: false,
-		}
-	})
-
-	return gormLog
 }
 
 func Logrus2GormLogLevel(level logrus.Level) gl.LogLevel {
