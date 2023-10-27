@@ -1,11 +1,11 @@
 package ginx
 
 import (
+	"github.com/c1emon/gcommon/logx"
 	"github.com/gin-gonic/gin"
-	"github.com/sirupsen/logrus"
 )
 
-func LogrusLogger(logger *logrus.Logger) gin.HandlerFunc {
+func LogrusLogger(logger logx.Logger) gin.HandlerFunc {
 
 	return func(c *gin.Context) {
 
@@ -21,13 +21,13 @@ func LogrusLogger(logger *logrus.Logger) gin.HandlerFunc {
 
 		switch {
 		case status >= 100 && status < 400:
-			logger.Infof("[%s %d] %s", method, status, uri)
+			logger.Info("[%s %d] %s", method, status, uri)
 		case status >= 400 && status < 500 && len(c.Errors) > 0:
-			logger.Warnf("[%s %d] %s: %s", method, status, uri, c.Errors[0].Error())
+			logger.Warn("[%s %d] %s: %s", method, status, uri, c.Errors[0].Error())
 		case status >= 500 && status < 600 && len(c.Errors) > 0:
-			logger.Errorf("[%s %d] %s: %s", method, status, uri, c.Errors[0].Error())
+			logger.Error("[%s %d] %s: %s", method, status, uri, c.Errors[0].Error())
 		default:
-			logger.Errorf("[%s %d] %s: %s\n%+v", method, status, uri, "unknown status", c.Errors)
+			logger.Error("[%s %d] %s: %s\n%+v", method, status, uri, "unknown status", c.Errors)
 		}
 
 	}

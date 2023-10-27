@@ -2,7 +2,6 @@ package gormx
 
 import (
 	"strings"
-	"sync"
 
 	"github.com/c1emon/gcommon/logx"
 	_ "github.com/lib/pq"
@@ -11,11 +10,6 @@ import (
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
-
-var once = sync.Once{}
-var gormInstance *gorm.DB
-var drv string
-var src string
 
 type DriverType int
 
@@ -39,11 +33,6 @@ func (d DriverType) String() string {
 	}
 }
 
-func Initialize(dbDrv, dbSrc string) {
-	drv = dbDrv
-	src = dbSrc
-}
-
 func ParseDriverType(dt string) DriverType {
 	switch strings.ToLower(dt) {
 	case "postgres":
@@ -57,7 +46,13 @@ func ParseDriverType(dt string) DriverType {
 	}
 }
 
-func connect(driverName DriverType, dsn string) {
+type DB struct {
+	*gorm.DB
+}
+
+func New(driverName DriverType, dsn string, loggerFactory logx.LoggerFactory) *DB {
+	logger := logx.NewGormLogger(loggerFactory)
+
 	var dialector gorm.Dialector
 	switch driverName {
 	case Postgres:
@@ -68,36 +63,26 @@ func connect(driverName DriverType, dsn string) {
 		dialector = sqlite.Open(dsn)
 	case Unknown:
 	default:
-		logx.GetLogger().Panicf("unknown driver type: %s", driverName)
+		logger.Panic("unknown driver type: %s", driverName)
 	}
 
 	db, err := gorm.Open(dialector, &gorm.Config{
-		Logger: logx.GetGormLogrusLogger(),
+		Logger: logger,
 	})
 
 	if err != nil {
-		logx.GetLogger().Panicf("unable connect to %s: %s", driverName, err)
+		logger.Panic("unable connect to %s: %s", driverName, err)
 	}
-	gormInstance = db
+
+	return &DB{
+		db,
+	}
 }
 
-func GetGormDB() *gorm.DB {
-
-	once.Do(func() {
-
-		connect(ParseDriverType(drv), src)
-	})
-
-	return gormInstance
-}
-
-func DisConnect() error {
-	if gormInstance != nil {
-		d, err := gormInstance.DB()
-		if err != nil {
-			return nil
-		}
-		return d.Close()
+func (db *DB) Close() error {
+	d, err := db.DB.DB()
+	if err != nil {
+		return err
 	}
-	return nil
+	return d.Close()
 }
