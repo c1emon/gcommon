@@ -6,18 +6,14 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"reflect"
 	"sync"
 	"syscall"
 	"time"
 
 	"github.com/c1emon/gcommon/logx"
+	"github.com/c1emon/gcommon/service"
 	"golang.org/x/sync/errgroup"
 )
-
-type BackgroundService interface {
-	Run(ctx context.Context) error
-}
 
 // from https://github.com/grafana/grafana/blob/4cc72a22ad03132295ab3428ed9877ba2cb42eb2/pkg/server/server.go
 func New() (*Server, error) {
@@ -44,7 +40,7 @@ func newServer() (*Server, error) {
 		shutdownFinished: make(chan any),
 		// log:              logx.GetLogger(),
 		// cfg:                cfg,
-		backgroundServices: make([]BackgroundService, 0),
+		svcRepo: service.NewServiceRepo(),
 	}
 
 	return s, nil
@@ -66,11 +62,7 @@ type Server struct {
 	// commit      string
 	// buildBranch string
 
-	backgroundServices []BackgroundService
-}
-
-func (s *Server) RegistSvc(svc BackgroundService) {
-	s.backgroundServices = append(s.backgroundServices, svc)
+	svcRepo *service.ServiceRepo
 }
 
 func (s *Server) Init() error {
@@ -92,23 +84,22 @@ func (s *Server) Run() error {
 		return err
 	}
 
-	services := s.backgroundServices
 	// Start background services.
-	for _, svc := range services {
+	for _, svc := range s.svcRepo.Services() {
 
 		service := svc
-		svcName := reflect.TypeOf(service).String()
-
 		s.childRoutines.Go(func() error {
 			select {
+			// 如果已经Done了，就停止启动流程
 			case <-s.context.Done():
 				return s.context.Err()
 			default:
 			}
 
 			// start service
-			s.logger.Debug("Starting background service: %s", svcName)
-			err := service.Run(s.context)
+			s.logger.Debug("Starting background service: %s", service.Name())
+			// block!
+			err := service.Run(s.context, 10)
 			// Do not return context.Canceled error since errgroup.Group only
 			// returns the first error to the caller - thus we can miss a more
 			// interesting error.
@@ -116,7 +107,7 @@ func (s *Server) Run() error {
 				s.logger.Error("Stopped background service: %s for %s", "http server", err)
 				return fmt.Errorf("%s run error: %w", "http server", err)
 			}
-			s.logger.Debug("Stopped background service %s for %s", svcName, err)
+			s.logger.Debug("Stopped background service %s for %s", service.Name(), err)
 			return nil
 		})
 
