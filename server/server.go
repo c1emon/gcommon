@@ -16,7 +16,7 @@ import (
 )
 
 // from https://github.com/grafana/grafana/blob/4cc72a22ad03132295ab3428ed9877ba2cb42eb2/pkg/server/server.go
-func New(repo *service.ServiceRepo, logger logx.Logger) (*Server, error) {
+func New(repo *service.ServiceRepo, logger logx.Logger, servserverOptions ...serverOption) (*Server, error) {
 	s, err := newServer(repo, logger)
 	if err != nil {
 		return nil, err
@@ -26,6 +26,7 @@ func New(repo *service.ServiceRepo, logger logx.Logger) (*Server, error) {
 		return nil, err
 	}
 
+	fromOptions(s, servserverOptions...)
 	return s, nil
 }
 
@@ -39,8 +40,12 @@ func newServer(repo *service.ServiceRepo, logger logx.Logger) (*Server, error) {
 		shutdownFn:       shutdownFn,
 		shutdownFinished: make(chan any),
 		logger:           logger,
-		// cfg:                cfg,
-		svcRepo: repo,
+
+		preRunFunc:   nil,
+		postRunFunc:  nil,
+		preStopFunc:  nil,
+		postStopFunc: nil,
+		svcRepo:      repo,
 	}
 
 	return s, nil
@@ -62,6 +67,11 @@ type Server struct {
 	// commit      string
 	// buildBranch string
 
+	preRunFunc   func() error
+	postRunFunc  func() error
+	preStopFunc  func() error
+	postStopFunc func() error
+
 	svcRepo *service.ServiceRepo
 }
 
@@ -77,12 +87,46 @@ func (s *Server) Init() error {
 	return nil
 }
 
+func (s *Server) preRun() error {
+	if s.preRunFunc != nil {
+		s.logger.Debug("server pre run task")
+		return s.preRunFunc()
+	}
+	return nil
+}
+
+func (s *Server) postRun() error {
+	if s.postRunFunc != nil {
+		s.logger.Debug("server post run task")
+		return s.postRunFunc()
+	}
+	return nil
+}
+
+func (s *Server) preStop() error {
+	if s.preStopFunc != nil {
+		s.logger.Debug("server pre stop task")
+		return s.preStopFunc()
+	}
+	return nil
+}
+
+func (s *Server) postStop() error {
+	if s.postStopFunc != nil {
+		s.logger.Debug("server post stop task")
+		return s.postStopFunc()
+	}
+	return nil
+}
+
 func (s *Server) Run() error {
 	defer close(s.shutdownFinished)
 
 	if err := s.Init(); err != nil {
 		return err
 	}
+
+	s.preRun()
 
 	// Start background services.
 	for _, svc := range s.svcRepo.Services() {
@@ -113,6 +157,7 @@ func (s *Server) Run() error {
 
 	}
 
+	s.postRun()
 	return s.childRoutines.Wait()
 }
 
@@ -123,6 +168,7 @@ func (s *Server) Shutdown(ctx context.Context, reason string) error {
 	var err error
 	s.shutdownOnce.Do(func() {
 		s.logger.Info("shutdown started reason: %s", reason)
+		s.preStop()
 		// Call cancel func to stop background services.
 		s.shutdownFn()
 		// Wait for server to shut down
@@ -133,6 +179,7 @@ func (s *Server) Shutdown(ctx context.Context, reason string) error {
 			s.logger.Warn("timed out while waiting for server to shutdown")
 			err = fmt.Errorf("timeout waiting for shutdown")
 		}
+		s.postStop()
 	})
 
 	return err

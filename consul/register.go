@@ -2,7 +2,6 @@ package consul
 
 import (
 	"fmt"
-	"net"
 
 	"github.com/hashicorp/consul/api"
 )
@@ -14,16 +13,6 @@ type ConsulClient struct {
 	serviceName string
 	ip          string
 	port        int
-}
-
-func GetOutboundIP() (net.IP, error) {
-	conn, err := net.Dial("udp", "8.8.8.8:80")
-	if err != nil {
-		return nil, err
-	}
-	defer conn.Close()
-	localAddr := conn.LocalAddr().(*net.UDPAddr)
-	return localAddr.IP, nil
 }
 
 // New 连接至consul服务返回一个consul对象
