@@ -78,9 +78,9 @@ func (s *LogrusLoggerFactory) Format(entry *logrus.Entry) ([]byte, error) {
 	}
 
 	timestamp := time.Now().In(s.timeZone).Format(s.timeFormat)
-	msg := fmt.Sprintf("%s [%s] -- %s\n",
+	msg := fmt.Sprintf("%s %-7s -- %s\n",
 		timestamp,
-		colorFormatter(strings.ToUpper(entry.Level.String())),
+		colorFormatter(strings.ToUpper(fmt.Sprintf("[%s]", entry.Level.String()))),
 		entry.Message)
 	if entry.Data != nil && len(entry.Data) > 0 {
 		msg = fmt.Sprintf("%s\n%s\n", msg, util.PrettyMarshal(entry.Data))
@@ -99,6 +99,22 @@ func (l *LogrusLogger) GetLevel() Level {
 	return l.lv
 }
 
+func fromOptions(l *logrus.Entry, opts []logOption) *logrus.Entry {
+	var entry *logrus.Entry
+
+	lo := readOptions(opts)
+	if vals, ok := lo.GetValues(); ok {
+		entry = l.WithFields(vals)
+	} else {
+		entry = l
+	}
+	if ctx, ok := lo.GetCtx(); ok {
+		entry = entry.WithContext(ctx)
+	}
+
+	return entry
+}
+
 // Debug implements Logger.
 func (l *LogrusLogger) Debug(format string, values ...any) {
 	l.Debugf(format, values...)
@@ -106,66 +122,65 @@ func (l *LogrusLogger) Debug(format string, values ...any) {
 
 // DebugWith implements Logger.
 func (l *LogrusLogger) DebugWith(opts []logOption, format string, values ...any) {
-	lo := readOptions(opts)
-	l.WithFields(logrus.Fields{"xx": lo.GetValues()}).Debugf(format, values...)
+	fromOptions(l.Entry, opts).Debugf(format, values...)
 }
 
 // Error implements Logger.
 func (l *LogrusLogger) Error(format string, values ...any) {
-	panic("unimplemented")
+	l.Errorf(format, values...)
 }
 
 // ErrorWith implements Logger.
 func (l *LogrusLogger) ErrorWith(opts []logOption, format string, values ...any) {
-	panic("unimplemented")
+	fromOptions(l.Entry, opts).Errorf(format, values...)
 }
 
 // Fatal implements Logger.
 func (l *LogrusLogger) Fatal(format string, values ...any) {
-	panic("unimplemented")
+	l.Fatalf(format, values...)
 }
 
 // FatalWith implements Logger.
 func (l *LogrusLogger) FatalWith(opts []logOption, format string, values ...any) {
-	panic("unimplemented")
+	fromOptions(l.Entry, opts).Fatalf(format, values...)
 }
 
 // Info implements Logger.
 func (l *LogrusLogger) Info(format string, values ...any) {
-	panic("unimplemented")
+	l.Infof(format, values...)
 }
 
 // InfoWith implements Logger.
 func (l *LogrusLogger) InfoWith(opts []logOption, format string, values ...any) {
-	panic("unimplemented")
+	fromOptions(l.Entry, opts).Infof(format, values...)
 }
 
 // Panic implements Logger.
 func (l *LogrusLogger) Panic(format string, values ...any) {
-	panic("unimplemented")
+	l.Panicf(format, values...)
 }
 
 // PanicWith implements Logger.
 func (l *LogrusLogger) PanicWith(opts []logOption, format string, values ...any) {
-	panic("unimplemented")
+	fromOptions(l.Entry, opts).Panicf(format, values...)
 }
 
 // Trace implements Logger.
 func (l *LogrusLogger) Trace(format string, values ...any) {
-	panic("unimplemented")
+	l.Tracef(format, values...)
 }
 
 // TraceWith implements Logger.
 func (l *LogrusLogger) TraceWith(opts []logOption, format string, values ...any) {
-	panic("unimplemented")
+	fromOptions(l.Entry, opts).Tracef(format, values...)
 }
 
 // Warn implements Logger.
 func (l *LogrusLogger) Warn(format string, values ...any) {
-	panic("unimplemented")
+	l.Warnf(format, values...)
 }
 
 // WarnWith implements Logger.
 func (l *LogrusLogger) WarnWith(opts []logOption, format string, values ...any) {
-	panic("unimplemented")
+	fromOptions(l.Entry, opts).Warnf(format, values...)
 }
