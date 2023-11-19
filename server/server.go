@@ -16,8 +16,8 @@ import (
 )
 
 // from https://github.com/grafana/grafana/blob/4cc72a22ad03132295ab3428ed9877ba2cb42eb2/pkg/server/server.go
-func New() (*Server, error) {
-	s, err := newServer()
+func New(repo *service.ServiceRepo, logger logx.Logger) (*Server, error) {
+	s, err := newServer(repo, logger)
 	if err != nil {
 		return nil, err
 	}
@@ -29,7 +29,7 @@ func New() (*Server, error) {
 	return s, nil
 }
 
-func newServer() (*Server, error) {
+func newServer(repo *service.ServiceRepo, logger logx.Logger) (*Server, error) {
 	rootCtx, shutdownFn := context.WithCancel(context.Background())
 	childRoutines, childCtx := errgroup.WithContext(rootCtx)
 
@@ -38,9 +38,9 @@ func newServer() (*Server, error) {
 		childRoutines:    childRoutines,
 		shutdownFn:       shutdownFn,
 		shutdownFinished: make(chan any),
-		// log:              logx.GetLogger(),
+		logger:           logger,
 		// cfg:                cfg,
-		svcRepo: service.NewServiceRepo(),
+		svcRepo: repo,
 	}
 
 	return s, nil
@@ -97,17 +97,17 @@ func (s *Server) Run() error {
 			}
 
 			// start service
-			s.logger.Debug("Starting background service: %s", service.Name())
+			s.logger.Debug("starting background service: %s", service.Name())
 			// block!
 			err := service.Run(s.context, 10)
 			// Do not return context.Canceled error since errgroup.Group only
 			// returns the first error to the caller - thus we can miss a more
 			// interesting error.
 			if err != nil && !errors.Is(err, context.Canceled) {
-				s.logger.Error("Stopped background service: %s for %s", "http server", err)
-				return fmt.Errorf("%s run error: %w", "http server", err)
+				s.logger.Error("stopped background service %s error: %s", service.Name(), err)
+				return fmt.Errorf("%s stop error: %w", service.Name(), err)
 			}
-			s.logger.Debug("Stopped background service %s for %s", service.Name(), err)
+			s.logger.Debug("stopped background service: %s", service.Name())
 			return nil
 		})
 
@@ -122,15 +122,15 @@ func (s *Server) Run() error {
 func (s *Server) Shutdown(ctx context.Context, reason string) error {
 	var err error
 	s.shutdownOnce.Do(func() {
-		s.logger.Info("Shutdown started: %s", reason)
+		s.logger.Info("shutdown started reason: %s", reason)
 		// Call cancel func to stop background services.
 		s.shutdownFn()
 		// Wait for server to shut down
 		select {
 		case <-s.shutdownFinished:
-			s.logger.Debug("Finished waiting for server to shut down")
+			s.logger.Debug("finished waiting for server to shutdown")
 		case <-ctx.Done():
-			s.logger.Warn("Timed out while waiting for server to shut down")
+			s.logger.Warn("timed out while waiting for server to shutdown")
 			err = fmt.Errorf("timeout waiting for shutdown")
 		}
 	})
@@ -154,8 +154,8 @@ func (s *Server) ListenToSystemSignals(ctx context.Context) {
 		case sig := <-signalChan:
 			ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 			defer cancel()
-			if err := s.Shutdown(ctx, fmt.Sprintf("System signal: %s", sig)); err != nil {
-				fmt.Fprintf(os.Stderr, "Timed out waiting for server to shut down\n")
+			if err := s.Shutdown(ctx, fmt.Sprintf("system signal -> %s", sig)); err != nil {
+				s.logger.Error("timed out waiting for server to shutdown")
 			}
 			return
 		}
