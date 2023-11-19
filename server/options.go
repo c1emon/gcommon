@@ -38,21 +38,21 @@ func PreRunFunc(f func() error) serverOption {
 
 func PostRunFunc(f func() error) serverOption {
 	return util.WrapFuncOption[serverOptions](
-		func(lo *serverOptions) {
-			lo.postRunFunc = f
+		func(so *serverOptions) {
+			so.postRunFunc = f
 		})
 }
 
 func PreStopFunc(f func() error) serverOption {
 	return util.WrapFuncOption[serverOptions](
-		func(lo *serverOptions) {
-			lo.preStopFunc = f
+		func(so *serverOptions) {
+			so.preStopFunc = f
 		})
 }
 
 func PostStopFunc(f func() error) serverOption {
 	return util.WrapFuncOption[serverOptions](
-		func(lo *serverOptions) {
-			lo.postStopFunc = f
+		func(so *serverOptions) {
+			so.postStopFunc = f
 		})
 }
