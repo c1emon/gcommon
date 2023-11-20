@@ -1,16 +1,18 @@
 package server
 
 import (
+	"context"
+
 	"github.com/c1emon/gcommon/util"
 )
 
 type serverOption util.Option[serverOptions]
 
 type serverOptions struct {
-	preRunFunc   func() error
-	postRunFunc  func() error
-	preStopFunc  func() error
-	postStopFunc func() error
+	preRunFunc   func(context.Context) error
+	postRunFunc  func(context.Context) error
+	preStopFunc  func(context.Context) error
+	postStopFunc func(context.Context) error
 }
 
 func fromOptions(server *Server, opts ...serverOption) {
@@ -29,28 +31,28 @@ func fromOptions(server *Server, opts ...serverOption) {
 	server.postStopFunc = o.postStopFunc
 }
 
-func PreRunFunc(f func() error) serverOption {
+func PreRunFunc(f func(context.Context) error) serverOption {
 	return util.WrapFuncOption[serverOptions](
 		func(so *serverOptions) {
 			so.preRunFunc = f
 		})
 }
 
-func PostRunFunc(f func() error) serverOption {
+func PostRunFunc(f func(context.Context) error) serverOption {
 	return util.WrapFuncOption[serverOptions](
 		func(so *serverOptions) {
 			so.postRunFunc = f
 		})
 }
 
-func PreStopFunc(f func() error) serverOption {
+func PreStopFunc(f func(context.Context) error) serverOption {
 	return util.WrapFuncOption[serverOptions](
 		func(so *serverOptions) {
 			so.preStopFunc = f
 		})
 }
 
-func PostStopFunc(f func() error) serverOption {
+func PostStopFunc(f func(context.Context) error) serverOption {
 	return util.WrapFuncOption[serverOptions](
 		func(so *serverOptions) {
 			so.postStopFunc = f

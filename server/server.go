@@ -67,10 +67,10 @@ type Server struct {
 	// commit      string
 	// buildBranch string
 
-	preRunFunc   func() error
-	postRunFunc  func() error
-	preStopFunc  func() error
-	postStopFunc func() error
+	preRunFunc   func(context.Context) error
+	postRunFunc  func(context.Context) error
+	preStopFunc  func(context.Context) error
+	postStopFunc func(context.Context) error
 
 	svcRepo *service.ServiceRepo
 }
@@ -87,34 +87,34 @@ func (s *Server) Init() error {
 	return nil
 }
 
-func (s *Server) preRun() error {
+func (s *Server) preRun(ctx context.Context) error {
 	if s.preRunFunc != nil {
 		s.logger.Debug("server pre run task")
-		return s.preRunFunc()
+		return s.preRunFunc(ctx)
 	}
 	return nil
 }
 
-func (s *Server) postRun() error {
+func (s *Server) postRun(ctx context.Context) error {
 	if s.postRunFunc != nil {
 		s.logger.Debug("server post run task")
-		return s.postRunFunc()
+		return s.postRunFunc(ctx)
 	}
 	return nil
 }
 
-func (s *Server) preStop() error {
+func (s *Server) preStop(ctx context.Context) error {
 	if s.preStopFunc != nil {
 		s.logger.Debug("server pre stop task")
-		return s.preStopFunc()
+		return s.preStopFunc(ctx)
 	}
 	return nil
 }
 
-func (s *Server) postStop() error {
+func (s *Server) postStop(ctx context.Context) error {
 	if s.postStopFunc != nil {
 		s.logger.Debug("server post stop task")
-		return s.postStopFunc()
+		return s.postStopFunc(ctx)
 	}
 	return nil
 }
@@ -126,7 +126,7 @@ func (s *Server) Run() error {
 		return err
 	}
 
-	s.preRun()
+	s.preRun(s.context)
 
 	// Start background services.
 	for _, svc := range s.svcRepo.Services() {
@@ -157,7 +157,7 @@ func (s *Server) Run() error {
 
 	}
 
-	s.postRun()
+	s.postRun(s.context)
 	return s.childRoutines.Wait()
 }
 
@@ -168,7 +168,7 @@ func (s *Server) Shutdown(ctx context.Context, reason string) error {
 	var err error
 	s.shutdownOnce.Do(func() {
 		s.logger.Info("shutdown started reason: %s", reason)
-		s.preStop()
+		s.preStop(s.context)
 		// Call cancel func to stop background services.
 		s.shutdownFn()
 		// Wait for server to shut down
@@ -179,7 +179,7 @@ func (s *Server) Shutdown(ctx context.Context, reason string) error {
 			s.logger.Warn("timed out while waiting for server to shutdown")
 			err = fmt.Errorf("timeout waiting for shutdown")
 		}
-		s.postStop()
+		s.postStop(s.context)
 	})
 
 	return err
