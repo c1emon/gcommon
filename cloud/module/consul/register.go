@@ -2,9 +2,20 @@ package consul
 
 import (
 	"fmt"
+	"sync"
+	"time"
 
 	"github.com/hashicorp/consul/api"
 )
+
+// Registry is consul registry
+type Registry struct {
+	cli               *Client
+	enableHealthCheck bool
+	registry          map[string]*serviceSet
+	lock              sync.RWMutex
+	timeout           time.Duration
+}
 
 // ConsulClient 定义一个ConsulClient结构体，其内部有一个`*api.Client`字段。
 type ConsulClient struct {
