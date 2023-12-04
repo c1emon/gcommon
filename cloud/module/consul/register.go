@@ -12,9 +12,9 @@ import (
 type Registry struct {
 	cli               *Client
 	enableHealthCheck bool
-	registry          map[string]*serviceSet
-	lock              sync.RWMutex
-	timeout           time.Duration
+	// registry          map[string]*serviceSet
+	lock    sync.RWMutex
+	timeout time.Duration
 }
 
 // ConsulClient 定义一个ConsulClient结构体，其内部有一个`*api.Client`字段。

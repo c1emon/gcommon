@@ -11,8 +11,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/c1emon/gcommon/cloud"
+	"github.com/c1emon/gcommon/logx"
 	"github.com/hashicorp/consul/api"
-	"github.com/labstack/gommon/log"
 )
 
 type Datacenter string
@@ -39,10 +40,11 @@ type Client struct {
 	deregisterCriticalServiceAfter int
 	// serviceChecks  user custom checks
 	serviceChecks api.AgentServiceChecks
+	logger        logx.Logger
 }
 
-func defaultResolver(_ context.Context, entries []*api.ServiceEntry) []*registry.ServiceInstance {
-	services := make([]*registry.ServiceInstance, 0, len(entries))
+func defaultResolver(_ context.Context, entries []*api.ServiceEntry) []*cloud.ServiceInstance {
+	services := make([]*cloud.ServiceInstance, 0, len(entries))
 	for _, entry := range entries {
 		var version string
 		for _, tag := range entry.Service.Tags {
@@ -61,7 +63,7 @@ func defaultResolver(_ context.Context, entries []*api.ServiceEntry) []*registry
 		if len(endpoints) == 0 && entry.Service.Address != "" && entry.Service.Port != 0 {
 			endpoints = append(endpoints, fmt.Sprintf("http://%s:%d", entry.Service.Address, entry.Service.Port))
 		}
-		services = append(services, &registry.ServiceInstance{
+		services = append(services, &cloud.ServiceInstance{
 			ID:        entry.Service.ID,
 			Name:      entry.Service.Service,
 			Metadata:  entry.Service.Meta,
@@ -74,10 +76,10 @@ func defaultResolver(_ context.Context, entries []*api.ServiceEntry) []*registry
 }
 
 // ServiceResolver is used to resolve service endpoints
-type ServiceResolver func(ctx context.Context, entries []*api.ServiceEntry) []*registry.ServiceInstance
+type ServiceResolver func(ctx context.Context, entries []*api.ServiceEntry) []*cloud.ServiceInstance
 
 // Service get services from consul
-func (c *Client) Service(ctx context.Context, service string, index uint64, passingOnly bool) ([]*registry.ServiceInstance, uint64, error) {
+func (c *Client) Service(ctx context.Context, service string, index uint64, passingOnly bool) ([]*cloud.ServiceInstance, uint64, error) {
 	if c.dc == MultiDatacenter {
 		return c.multiDCService(ctx, service, index, passingOnly)
 	}
@@ -100,14 +102,14 @@ func (c *Client) Service(ctx context.Context, service string, index uint64, pass
 	return c.resolver(ctx, entries), meta.LastIndex, nil
 }
 
-func (c *Client) multiDCService(ctx context.Context, service string, index uint64, passingOnly bool) ([]*registry.ServiceInstance, uint64, error) {
+func (c *Client) multiDCService(ctx context.Context, service string, index uint64, passingOnly bool) ([]*cloud.ServiceInstance, uint64, error) {
 	opts := &api.QueryOptions{
 		WaitIndex: index,
 		WaitTime:  time.Second * 55,
 	}
 	opts = opts.WithContext(ctx)
 
-	var instances []*registry.ServiceInstance
+	var instances []*cloud.ServiceInstance
 
 	dcs, err := c.cli.Catalog().Datacenters()
 	if err != nil {
@@ -141,7 +143,7 @@ func (c *Client) singleDCEntries(service, tag string, passingOnly bool, opts *ap
 }
 
 // Register register service instance to consul
-func (c *Client) Register(_ context.Context, svc *registry.ServiceInstance, enableHealthCheck bool) error {
+func (c *Client) Register(_ context.Context, svc *cloud.ServiceInstance, enableHealthCheck bool) error {
 	addresses := make(map[string]api.ServiceAddress, len(svc.Endpoints))
 	checkAddresses := make([]string, 0, len(svc.Endpoints))
 	for _, endpoint := range svc.Endpoints {
@@ -197,7 +199,7 @@ func (c *Client) Register(_ context.Context, svc *registry.ServiceInstance, enab
 			time.Sleep(time.Second)
 			err = c.cli.Agent().UpdateTTL("service:"+svc.ID, "pass", "pass")
 			if err != nil {
-				log.Errorf("[Consul]update ttl heartbeat to consul failed!err:=%v", err)
+				c.logger.Error("[Consul]update ttl heartbeat to consul failed!err:=%v", err)
 			}
 			ticker := time.NewTicker(time.Second * time.Duration(c.healthcheckInterval))
 			defer ticker.Stop()
@@ -220,13 +222,13 @@ func (c *Client) Register(_ context.Context, svc *registry.ServiceInstance, enab
 					}
 					err = c.cli.Agent().UpdateTTL("service:"+svc.ID, "pass", "pass")
 					if err != nil {
-						log.Errorf("[Consul] update ttl heartbeat to consul failed! err=%v", err)
+						c.logger.Error("[Consul] update ttl heartbeat to consul failed! err=%v", err)
 						// when the previous report fails, try to re register the service
 						time.Sleep(time.Duration(rand.Intn(5)) * time.Second)
 						if err := c.cli.Agent().ServiceRegister(asr); err != nil {
-							log.Errorf("[Consul] re registry service failed!, err=%v", err)
+							c.logger.Error("[Consul] re registry service failed!, err=%v", err)
 						} else {
-							log.Warn("[Consul] re registry of service occurred success")
+							c.logger.Warn("[Consul] re registry of service occurred success")
 						}
 					}
 				}
