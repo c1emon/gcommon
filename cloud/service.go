@@ -5,8 +5,8 @@ import (
 	"sort"
 )
 
-// ServiceInstance is an instance of a service in a discovery system.
-type ServiceInstance struct {
+// RemoteService is an instance of a service in a discovery system.
+type RemoteService struct {
 	// ID is the unique instance ID as registered.
 	ID string `json:"id"`
 	// Name is the service name as registered.
@@ -15,6 +15,8 @@ type ServiceInstance struct {
 	Version string `json:"version"`
 	// Metadata is the kv pair metadata associated with the service instance.
 	Metadata map[string]string `json:"metadata"`
+	// Tags is string list
+	Tags []string
 	// Endpoints are endpoint addresses of the service instance.
 	// schema:
 	//   http://127.0.0.1:8000?isSecure=false
@@ -22,12 +24,12 @@ type ServiceInstance struct {
 	Endpoints []string `json:"endpoints"`
 }
 
-func (i *ServiceInstance) String() string {
+func (i *RemoteService) String() string {
 	return fmt.Sprintf("%s-%s", i.Name, i.ID)
 }
 
 // Equal returns whether i and o are equivalent.
-func (i *ServiceInstance) Equal(o interface{}) bool {
+func (i *RemoteService) Equal(o any) bool {
 	if i == nil && o == nil {
 		return true
 	}
@@ -36,7 +38,7 @@ func (i *ServiceInstance) Equal(o interface{}) bool {
 		return false
 	}
 
-	t, ok := o.(*ServiceInstance)
+	t, ok := o.(*RemoteService)
 	if !ok {
 		return false
 	}
@@ -49,6 +51,14 @@ func (i *ServiceInstance) Equal(o interface{}) bool {
 	sort.Strings(t.Endpoints)
 	for j := 0; j < len(i.Endpoints); j++ {
 		if i.Endpoints[j] != t.Endpoints[j] {
+			return false
+		}
+	}
+
+	sort.Strings(i.Tags)
+	sort.Strings(t.Tags)
+	for j := 0; j < len(i.Tags); j++ {
+		if i.Tags[j] != t.Tags[j] {
 			return false
 		}
 	}
