@@ -21,7 +21,7 @@ type RemoteService struct {
 	// schema:
 	//   http://127.0.0.1:8000?isSecure=false
 	//   grpc://127.0.0.1:9000?isSecure=false
-	Endpoints []string `json:"endpoints"`
+	Endpoints []*Endpoint `json:"endpoints"`
 }
 
 func (i *RemoteService) String() string {
@@ -47,13 +47,13 @@ func (i *RemoteService) Equal(o any) bool {
 		return false
 	}
 
-	sort.Strings(i.Endpoints)
-	sort.Strings(t.Endpoints)
-	for j := 0; j < len(i.Endpoints); j++ {
-		if i.Endpoints[j] != t.Endpoints[j] {
-			return false
-		}
-	}
+	// sort.Strings(i.Endpoints)
+	// sort.Strings(t.Endpoints)
+	// for j := 0; j < len(i.Endpoints); j++ {
+	// 	if i.Endpoints[j] != t.Endpoints[j] {
+	// 		return false
+	// 	}
+	// }
 
 	sort.Strings(i.Tags)
 	sort.Strings(t.Tags)
