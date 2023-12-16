@@ -1,10 +1,17 @@
 package consul
 
 import (
+	"context"
+	"errors"
 	"fmt"
+	"math/rand"
+	"net"
+	"net/url"
+	"strconv"
 	"sync"
 	"time"
 
+	"github.com/c1emon/gcommon/cloud"
 	"github.com/hashicorp/consul/api"
 )
 
@@ -17,30 +24,28 @@ type Registry struct {
 	timeout time.Duration
 }
 
-// ConsulClient 定义一个ConsulClient结构体，其内部有一个`*api.Client`字段。
-type ConsulClient struct {
-	*api.Client
+// RegisterClient 定义一个RegisterClient结构体，其内部有一个`*api.Client`字段。
+type RegisterClient struct {
+	client      *Client
 	id          string
 	serviceName string
 	ip          string
 	port        int
-}
 
-// New 连接至consul服务返回一个consul对象
-func New(addr string) (*ConsulClient, error) {
-	cfg := api.DefaultConfig()
-	cfg.Address = addr
-	c, err := api.NewClient(cfg)
-	if err != nil {
-		return nil, err
-	}
-	return &ConsulClient{
-		Client: c,
-	}, nil
+	// resolve service entry endpoints
+	resolver ServiceResolver
+	// healthcheck time interval in seconds
+	healthcheckInterval int
+	// heartbeat enable heartbeat
+	heartbeat bool
+	// deregisterCriticalServiceAfter time interval in seconds
+	deregisterCriticalServiceAfter int
+	// serviceChecks  user custom checks
+	serviceChecks api.AgentServiceChecks
 }
 
 // RegisterService
-func (c *ConsulClient) RegisterService(serviceName, ip string, port int) error {
+func (c *RegisterClient) RegisterService(serviceName, ip string, port int) error {
 
 	c.id = fmt.Sprintf("%s-%s-%d", serviceName, ip, port)
 	c.serviceName = serviceName
@@ -71,6 +76,104 @@ func (c *ConsulClient) RegisterService(serviceName, ip string, port int) error {
 	return c.Agent().ServiceRegister(srv)
 }
 
-func (c *ConsulClient) Deregister() error {
-	return c.Agent().ServiceDeregister(c.id)
+// Register register service instance to consul
+func (c *RegisterClient) Register(_ context.Context, svc *cloud.RemoteService, enableHealthCheck bool) error {
+	addresses := make(map[string]api.ServiceAddress, len(svc.Endpoints))
+	checkAddresses := make([]string, 0, len(svc.Endpoints))
+	for _, endpoint := range svc.Endpoints {
+		raw, err := url.Parse(endpoint)
+		if err != nil {
+			return err
+		}
+		addr := raw.Hostname()
+		port, _ := strconv.ParseUint(raw.Port(), 10, 16)
+
+		checkAddresses = append(checkAddresses, net.JoinHostPort(addr, strconv.FormatUint(port, 10)))
+		addresses[raw.Scheme] = api.ServiceAddress{Address: endpoint, Port: int(port)}
+	}
+	asr := &api.AgentServiceRegistration{
+		ID:              svc.ID,
+		Name:            svc.Name,
+		Meta:            svc.Metadata,
+		Tags:            []string{fmt.Sprintf("version=%s", svc.Version)},
+		TaggedAddresses: addresses,
+	}
+	if len(checkAddresses) > 0 {
+		host, portRaw, _ := net.SplitHostPort(checkAddresses[0])
+		port, _ := strconv.ParseInt(portRaw, 10, 32)
+		asr.Address = host
+		asr.Port = int(port)
+	}
+	if enableHealthCheck {
+		for _, address := range checkAddresses {
+			asr.Checks = append(asr.Checks, &api.AgentServiceCheck{
+				TCP:                            address,
+				Interval:                       fmt.Sprintf("%ds", c.healthcheckInterval),
+				DeregisterCriticalServiceAfter: fmt.Sprintf("%ds", c.deregisterCriticalServiceAfter),
+				Timeout:                        "5s",
+			})
+		}
+		// custom checks
+		asr.Checks = append(asr.Checks, c.serviceChecks...)
+	}
+	if c.heartbeat {
+		asr.Checks = append(asr.Checks, &api.AgentServiceCheck{
+			CheckID:                        "service:" + svc.ID,
+			TTL:                            fmt.Sprintf("%ds", c.healthcheckInterval*2),
+			DeregisterCriticalServiceAfter: fmt.Sprintf("%ds", c.deregisterCriticalServiceAfter),
+		})
+	}
+
+	err := c.cli.Agent().ServiceRegister(asr)
+	if err != nil {
+		return err
+	}
+	if c.heartbeat {
+		go func() {
+			time.Sleep(time.Second)
+			err = c.cli.Agent().UpdateTTL("service:"+svc.ID, "pass", "pass")
+			if err != nil {
+				c.logger.Error("[Consul]update ttl heartbeat to consul failed!err:=%v", err)
+			}
+			ticker := time.NewTicker(time.Second * time.Duration(c.healthcheckInterval))
+			defer ticker.Stop()
+			for {
+				select {
+				case <-c.ctx.Done():
+					_ = c.cli.Agent().ServiceDeregister(svc.ID)
+					return
+				default:
+				}
+				select {
+				case <-c.ctx.Done():
+					_ = c.cli.Agent().ServiceDeregister(svc.ID)
+					return
+				case <-ticker.C:
+					// ensure that unregistered services will not be re-registered by mistake
+					if errors.Is(c.ctx.Err(), context.Canceled) || errors.Is(c.ctx.Err(), context.DeadlineExceeded) {
+						_ = c.cli.Agent().ServiceDeregister(svc.ID)
+						return
+					}
+					err = c.cli.Agent().UpdateTTL("service:"+svc.ID, "pass", "pass")
+					if err != nil {
+						c.logger.Error("[Consul] update ttl heartbeat to consul failed! err=%v", err)
+						// when the previous report fails, try to re register the service
+						time.Sleep(time.Duration(rand.Intn(5)) * time.Second)
+						if err := c.cli.Agent().ServiceRegister(asr); err != nil {
+							c.logger.Error("[Consul] re registry service failed!, err=%v", err)
+						} else {
+							c.logger.Warn("[Consul] re registry of service occurred success")
+						}
+					}
+				}
+			}
+		}()
+	}
+	return nil
+}
+
+// Deregister service by service ID
+func (c *RegisterClient) Deregister(_ context.Context, serviceID string) error {
+	defer c.cancel()
+	return c.cli.Agent().ServiceDeregister(serviceID)
 }
