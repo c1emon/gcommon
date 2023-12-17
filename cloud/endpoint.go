@@ -33,7 +33,7 @@ type Endpoint struct {
 	Schema Schema `json:"schema"`
 	// Host is the ip/domain of endpoint
 	Host string `json:"host"`
-	Port string `json:"port"`
+	Port int    `json:"port"`
 	// deal with local ca
 	Secure bool `json:"secure"`
 	TlsCfg *tls.Config
