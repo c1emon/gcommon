@@ -16,7 +16,7 @@ type RemoteService struct {
 	// Metadata is the kv pair metadata associated with the service instance.
 	Metadata map[string]string `json:"metadata"`
 	// Tags is string list
-	Tags []string
+	Tags []string `json:"tags"`
 	// Endpoints are endpoint addresses of the service instance.
 	// schema:
 	//   http://127.0.0.1:8000?isSecure=false

@@ -30,10 +30,18 @@ func New(addr string) (*Client, error) {
 	}, nil
 }
 
-func (c *Client) NewAgent() *api.Agent {
-	return c.cli.Agent()
+func (c *Client) RegisterSvc(svc *api.AgentServiceRegistration) error {
+	return c.cli.Agent().ServiceRegister(svc)
 }
 
-func (c *Client) NewHealth() {
-	// c.cli.Agent()
+func (c *Client) DeregisterSvc(id string) error {
+	return c.cli.Agent().ServiceDeregister(id)
+}
+
+func (c *Client) UpdateTTL(checkID, output, status string) error {
+	return c.cli.Agent().UpdateTTL(checkID, output, status)
+}
+
+func (c *Client) Catalog() *api.Catalog {
+	return c.cli.Catalog()
 }
