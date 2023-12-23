@@ -2,6 +2,8 @@ package cloud
 
 import (
 	"crypto/tls"
+	"fmt"
+	"time"
 )
 
 type Schema int
@@ -30,6 +32,7 @@ func (s Schema) String() string {
 
 // Endpoint is where remote service(http/rpc) can be called
 type Endpoint struct {
+	Enable bool
 	Schema Schema `json:"schema"`
 	// Host is the ip/domain of endpoint
 	Host string `json:"host"`
@@ -42,9 +45,24 @@ type Endpoint struct {
 	TlsCfg *tls.Config
 }
 
+func (e Endpoint) Uri() string {
+	var uri string
+	if e.Schema == HTTP && e.Secure && e.TlsCfg == nil {
+		uri = fmt.Sprintf("%ss://%s:%d", e.Schema, e.Host, e.Port)
+	} else {
+		uri = fmt.Sprintf("%s://%s:%d", e.Schema, e.Host, e.Port)
+	}
+	if len(e.Path) > 0 {
+		uri = fmt.Sprintf("%s/%s", uri, e.Path)
+	}
+	return uri
+}
+
 type HealthEndpoint struct {
 	Endpoint
 	Heartbeat                      bool
-	HealthCheckInterval            int
-	DeregisterCriticalServiceAfter int
+	HeartbeatInterval              time.Duration
+	Timeout                        time.Duration
+	HealthCheckInterval            time.Duration
+	DeregisterCriticalServiceAfter time.Duration
 }

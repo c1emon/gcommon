@@ -21,7 +21,7 @@ type RemoteService struct {
 	// schema:
 	//   http://127.0.0.1:8000?isSecure=false
 	//   grpc://127.0.0.1:9000?isSecure=false
-	Endpoints []*Endpoint `json:"endpoints"`
+	Endpoint *Endpoint `json:"endpoint"`
 }
 
 func (i *RemoteService) String() string {
@@ -40,10 +40,6 @@ func (i *RemoteService) Equal(o any) bool {
 
 	t, ok := o.(*RemoteService)
 	if !ok {
-		return false
-	}
-
-	if len(i.Endpoints) != len(t.Endpoints) {
 		return false
 	}
 

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/c1emon/gcommon/cloud"
 	"github.com/c1emon/gcommon/cloud/registry"
 	"github.com/hashicorp/consul/api"
 )
@@ -26,51 +27,81 @@ type RegisterClient struct {
 	serviceChecks api.AgentServiceChecks
 }
 
+func registrationResolver(info *registry.RemoteSvcRegInfo) *api.AgentServiceRegistration {
+	serviceChecks := make(api.AgentServiceChecks, 0)
+
+	// save registration to re-register
+	// when ttl error(likely consul server restart?)
+	registration := &api.AgentServiceRegistration{
+		ID:      info.ID,
+		Name:    info.Name,
+		Address: info.Endpoint.Host,
+		Port:    info.Endpoint.Port,
+		Tags:    info.Tags,
+		Meta:    info.Metadata,
+	}
+
+	if info.HealthEndpoint != nil {
+		if info.HealthEndpoint.Heartbeat {
+			serviceChecks = append(serviceChecks, &api.AgentServiceCheck{
+				// maybe modify?
+				CheckID:                        "service:" + info.ID,
+				TTL:                            fmt.Sprintf("%ds", int(info.HealthEndpoint.HeartbeatInterval.Seconds())*2),
+				DeregisterCriticalServiceAfter: fmt.Sprintf("%ds", int(info.HealthEndpoint.DeregisterCriticalServiceAfter.Seconds())),
+			})
+		}
+
+		if info.HealthEndpoint.Enable {
+			switch info.HealthEndpoint.Schema {
+			case cloud.HTTP:
+				serviceChecks = append(serviceChecks, &api.AgentServiceCheck{
+					CheckID:  "",
+					HTTP:     info.HealthEndpoint.Uri(), // 这里一定是外部可以访问的地址
+					Timeout:  fmt.Sprintf("%ds", int(info.HealthEndpoint.Timeout.Seconds())),
+					Interval: fmt.Sprintf("%ds", int(info.HealthEndpoint.HealthCheckInterval.Seconds())),
+					// 指定时间后自动注销不健康的服务节点
+					// 最小超时时间为1分钟，收获不健康服务的进程每30秒运行一次，因此触发注销的时间可能略长于配置的超时时间。
+					// CheckID:                        "service:" + info.ID,
+					DeregisterCriticalServiceAfter: fmt.Sprintf("%ds", info.HealthEndpoint.DeregisterCriticalServiceAfter),
+				})
+			case cloud.TCP:
+				serviceChecks = append(serviceChecks, &api.AgentServiceCheck{
+					CheckID:  "",
+					TCP:      fmt.Sprintf("%s:%d", info.HealthEndpoint.Host, info.HealthEndpoint.Port),
+					Timeout:  fmt.Sprintf("%ds", int(info.HealthEndpoint.Timeout.Seconds())),
+					Interval: fmt.Sprintf("%ds", int(info.HealthEndpoint.HealthCheckInterval.Seconds())),
+					// 指定时间后自动注销不健康的服务节点
+					// 最小超时时间为1分钟，收获不健康服务的进程每30秒运行一次，因此触发注销的时间可能略长于配置的超时时间。
+					// CheckID:                        "service:" + info.ID,
+					DeregisterCriticalServiceAfter: fmt.Sprintf("%ds", int(info.HealthEndpoint.DeregisterCriticalServiceAfter.Seconds())),
+				})
+			default:
+				serviceChecks = append(serviceChecks, &api.AgentServiceCheck{
+					CheckID:  "",
+					TCP:      fmt.Sprintf("%s:%d", info.Endpoint.Host, info.Endpoint.Port),
+					Timeout:  fmt.Sprintf("%ds", int(info.HealthEndpoint.Timeout.Seconds())),
+					Interval: fmt.Sprintf("%ds", int(info.HealthEndpoint.HealthCheckInterval.Seconds())),
+					// 指定时间后自动注销不健康的服务节点
+					// 最小超时时间为1分钟，收获不健康服务的进程每30秒运行一次，因此触发注销的时间可能略长于配置的超时时间。
+					// CheckID:                        "service:" + info.ID,
+					DeregisterCriticalServiceAfter: fmt.Sprintf("%ds", int(info.HealthEndpoint.DeregisterCriticalServiceAfter.Seconds())),
+				})
+			}
+		}
+
+	}
+
+	registration.Checks = serviceChecks
+
+	return registration
+}
+
 // Register register service instance to consul
 func (c *RegisterClient) Register(ctx context.Context, infos []*registry.RemoteSvcRegInfo) error {
 	c.svcInfos = infos
 	for _, info := range infos {
 
-		addresses := make(map[string]api.ServiceAddress, len(info.Endpoints))
-
-		for _, endpoint := range info.Endpoints {
-			addresses[endpoint.Schema.String()] = api.ServiceAddress{Address: endpoint.Host, Port: endpoint.Port}
-		}
-
-		// 不确定仅仅用`TaggedAddresses`可不可以
-		// save registration to re-register
-		// when ttl error(likely consul server restart?)
-		registration := &api.AgentServiceRegistration{
-			ID:              info.ID,
-			Name:            info.Name,
-			TaggedAddresses: addresses,
-			Tags:            info.Tags,
-			Meta:            info.Metadata,
-		}
-
-		// check := &api.AgentServiceCheck{
-		// 	HTTP:     fmt.Sprintf("http://%s:%d/health", c.ip, c.port), // 这里一定是外部可以访问的地址
-		// 	Timeout:  "10s",                                            // 超时时间
-		// 	Interval: "10s",                                            // 运行检查的频率
-		// 	// 指定时间后自动注销不健康的服务节点
-		// 	// 最小超时时间为1分钟，收获不健康服务的进程每30秒运行一次，因此触发注销的时间可能略长于配置的超时时间。
-		// 	DeregisterCriticalServiceAfter: "1m",
-		// }
-
-		if info.HealthEndpoint != nil {
-
-			if info.HealthEndpoint.Heartbeat {
-				c.serviceChecks = append(c.serviceChecks, &api.AgentServiceCheck{
-					// maybe modify?
-					CheckID:                        "service:" + info.ID,
-					TTL:                            fmt.Sprintf("%ds", info.HealthEndpoint.HealthCheckInterval*2),
-					DeregisterCriticalServiceAfter: fmt.Sprintf("%ds", info.HealthEndpoint.DeregisterCriticalServiceAfter),
-				})
-			}
-		}
-
-		registration.Checks = c.serviceChecks
-		err := c.client.RegisterSvc(registration)
+		err := c.client.RegisterSvc(registrationResolver(info))
 		if err != nil {
 			return err
 		}
