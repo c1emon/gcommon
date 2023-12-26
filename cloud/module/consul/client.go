@@ -45,3 +45,7 @@ func (c *Client) UpdateTTL(checkID, output, status string) error {
 func (c *Client) Catalog() *api.Catalog {
 	return c.cli.Catalog()
 }
+
+func (c *Client) Services() (map[string]*api.AgentService, error) {
+	return c.cli.Agent().Services()
+}
