@@ -150,6 +150,12 @@ func (c *RegisterClient) Register(regInfos []*registry.RemoteSvcRegInfo) error {
 // Deregister service by service ID
 func (c *RegisterClient) Deregister(_ context.Context, ids ...string) error {
 	c.cancelFn()
+	if len(ids) == 0 {
+		ids = make([]string, len(c.registrations))
+		for id := range c.registrations {
+			ids = append(ids, id)
+		}
+	}
 	for _, id := range ids {
 		err := c.client.DeregisterSvc(id)
 		if err != nil {

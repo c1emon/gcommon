@@ -11,8 +11,7 @@ import (
 type Client struct {
 	cli *api.Client
 
-	ctx    context.Context
-	cancel context.CancelFunc
+	ctx context.Context
 
 	logger logx.Logger
 }
@@ -27,6 +26,7 @@ func New(addr string) (*Client, error) {
 	}
 	return &Client{
 		cli: c,
+		ctx: context.Background(),
 	}, nil
 }
 
