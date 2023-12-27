@@ -21,26 +21,17 @@ func TestConsulRegister(t *testing.T) {
 	if err != nil {
 		logger.Fatal("%s", err)
 	}
-
-	svc := &registry.RemoteSvcRegInfo{
-		RemoteService: cloud.RemoteService{
-			ID:   "svc1",
-			Name: "svc1",
-			Endpoint: &cloud.Endpoint{
-				Schema: cloud.HTTP,
-				Host:   "baidu.com",
-				Port:   80,
-			},
+	svc := registry.BuildRegistrationInfo(cloud.RemoteService{
+		ID:   "svc1",
+		Name: "svc1",
+		Endpoint: &cloud.Endpoint{
+			Schema: cloud.HTTP,
+			Host:   "baidu.com",
+			Port:   80,
 		},
-		HealthEndpoint: &cloud.HealthEndpoint{
-			Endpoint:                       cloud.Endpoint{},
-			Heartbeat:                      true,
-			HeartbeatInterval:              time.Duration(1) * time.Second,
-			HealthCheckInterval:            time.Duration(5) * time.Second,
-			Timeout:                        time.Duration(5) * time.Second,
-			DeregisterCriticalServiceAfter: time.Duration(5) * time.Second,
-		},
-	}
+	}, registry.WithTTL(time.Duration(5)*time.Second),
+		registry.WithTimeout(time.Second*time.Duration(10)),
+		registry.WithHttpEndpoint("baidu.com", 80))
 
 	regClient.Register([]*registry.RemoteSvcRegInfo{svc})
 	time.Sleep(time.Duration(20) * time.Second)
