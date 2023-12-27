@@ -54,14 +54,14 @@ func registrationResolver(info *registry.RemoteSvcRegInfo) *api.AgentServiceRegi
 	}
 
 	if info.HealthEndpoint != nil {
-		interval := fmt.Sprintf("%ds", int(info.HealthEndpoint.HealthCheckInterval.Seconds()))
-		timeout := fmt.Sprintf("%ds", int(info.HealthEndpoint.Timeout.Seconds()))
-		deregisterAfter := fmt.Sprintf("%ds", info.HealthEndpoint.DeregisterCriticalServiceAfter)
+		interval := info.HealthEndpoint.HealthCheckInterval.String()
+		timeout := info.HealthEndpoint.Timeout.String()
+		deregisterAfter := info.HealthEndpoint.DeregisterCriticalServiceAfter.String()
 		// AgentServiceCheck's `CheckID`` should be used other then `ID``
 		if info.HealthEndpoint.Heartbeat {
 			serviceChecks = append(serviceChecks, &api.AgentServiceCheck{
 				CheckID:                        fmt.Sprintf("%s-ttl", info.ID),
-				TTL:                            fmt.Sprintf("%ds", int(info.HealthEndpoint.HeartbeatInterval.Seconds()*2+1)),
+				TTL:                            fmt.Sprintf("%ds", int(info.HealthEndpoint.HeartbeatInterval.Seconds()+1)),
 				DeregisterCriticalServiceAfter: deregisterAfter,
 			})
 		}
@@ -70,7 +70,7 @@ func registrationResolver(info *registry.RemoteSvcRegInfo) *api.AgentServiceRegi
 			switch info.HealthEndpoint.Schema {
 			case cloud.HTTP:
 				serviceChecks = append(serviceChecks, &api.AgentServiceCheck{
-					CheckID:  fmt.Sprintf("%s-health-http", info.ID),
+					CheckID:  fmt.Sprintf("%s-http", info.ID),
 					HTTP:     info.HealthEndpoint.Uri(), // 这里一定是外部可以访问的地址
 					Timeout:  timeout,
 					Interval: interval,
@@ -80,7 +80,7 @@ func registrationResolver(info *registry.RemoteSvcRegInfo) *api.AgentServiceRegi
 				})
 			case cloud.TCP:
 				serviceChecks = append(serviceChecks, &api.AgentServiceCheck{
-					CheckID:  fmt.Sprintf("%s-health-tcp", info.ID),
+					CheckID:  fmt.Sprintf("%s-tcp", info.ID),
 					TCP:      fmt.Sprintf("%s:%d", info.HealthEndpoint.Host, info.HealthEndpoint.Port),
 					Timeout:  timeout,
 					Interval: interval,

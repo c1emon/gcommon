@@ -34,7 +34,10 @@ func TestConsulRegister(t *testing.T) {
 		registry.WithTimeout(time.Second*time.Duration(10)),
 		registry.WithHttpEndpoint("baidu.com", 80))
 
-	regClient.Register([]*registry.RemoteSvcRegInfo{svc})
+	err = regClient.Register([]*registry.RemoteSvcRegInfo{svc})
+	if err != nil {
+		logger.Fatal("err=%s", err)
+	}
 	time.Sleep(time.Duration(20) * time.Second)
 	regClient.Deregister()
 }
