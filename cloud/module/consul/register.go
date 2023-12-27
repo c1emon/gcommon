@@ -170,6 +170,7 @@ func (c *RegisterClient) Deregister(ids ...string) error {
 		if err != nil {
 			return err
 		}
+		delete(c.registrations, id)
 	}
 	c.ttlWg.Wait()
 	return nil
