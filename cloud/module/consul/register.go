@@ -109,6 +109,7 @@ func (c *RegisterClient) Register(regInfos []*registry.RemoteSvcRegInfo) error {
 		if err != nil {
 			return err
 		}
+		c.logger.Info("register server %s", registration.Name)
 		if info.HealthEndpoint != nil && info.HealthEndpoint.Heartbeat {
 			ttlFn := func() {
 				c.ttlWg.Add(1)
@@ -164,6 +165,7 @@ func (c *RegisterClient) Deregister(ids ...string) error {
 		}
 	}
 	for _, id := range ids {
+		c.logger.Info("de-register service %s", id)
 		err := c.client.DeregisterSvc(id)
 		if err != nil {
 			return err
