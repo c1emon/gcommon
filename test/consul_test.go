@@ -11,8 +11,9 @@ import (
 )
 
 func TestConsulRegister(t *testing.T) {
-	logger := logx.NewLogrusLoggerFactory(logx.LevelDebug).Get("test")
-	consulClient, err := consul.New("docker.dev.clemon:8500")
+	loggerFactory := logx.NewLogrusLoggerFactory(logx.LevelDebug)
+	logger := loggerFactory.Get("test")
+	consulClient, err := consul.New("docker.dev.clemon:8500", loggerFactory)
 	if err != nil {
 		logger.Fatal("%s", err)
 	}
