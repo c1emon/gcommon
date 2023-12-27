@@ -58,11 +58,20 @@ func (e Endpoint) Uri() string {
 	return uri
 }
 
+// HealthEndpoint define a endpoint for health check
 type HealthEndpoint struct {
+	// Endpoint is where register center will check
 	Endpoint
-	Heartbeat                      bool
-	HeartbeatInterval              time.Duration
-	Timeout                        time.Duration
-	HealthCheckInterval            time.Duration
+	// Timeout register center consider the service fail without repley after timeout
+	Timeout time.Duration
+	// HealthCheckInterval is the interval register center should check endpoint
+	HealthCheckInterval time.Duration
+
+	// DeregisterCriticalServiceAfter register center will deregister the service after some interval
 	DeregisterCriticalServiceAfter time.Duration
+
+	// Heartbeat means ttl check
+	Heartbeat bool
+	// HeartbeatInterval update heartbeat interval
+	HeartbeatInterval time.Duration
 }

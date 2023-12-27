@@ -57,7 +57,7 @@ func registrationResolver(info *registry.RemoteSvcRegInfo) *api.AgentServiceRegi
 		if info.HealthEndpoint.Heartbeat {
 			serviceChecks = append(serviceChecks, &api.AgentServiceCheck{
 				CheckID:                        fmt.Sprintf("%s-ttl", info.ID),
-				TTL:                            fmt.Sprintf("%ds", int(info.HealthEndpoint.HeartbeatInterval.Seconds())*2),
+				TTL:                            fmt.Sprintf("%ds", int(info.HealthEndpoint.HeartbeatInterval.Seconds()*2+1)),
 				DeregisterCriticalServiceAfter: deregisterAfter,
 			})
 		}
@@ -105,7 +105,7 @@ func (c *RegisterClient) Register(regInfos []*registry.RemoteSvcRegInfo) error {
 		if err != nil {
 			return err
 		}
-		if info.HealthEndpoint.Heartbeat {
+		if info.HealthEndpoint != nil && info.HealthEndpoint.Heartbeat {
 			ttlFn := func() {
 				c.ttlWg.Add(1)
 				defer c.ttlWg.Done()
@@ -115,21 +115,20 @@ func (c *RegisterClient) Register(regInfos []*registry.RemoteSvcRegInfo) error {
 				for {
 					select {
 					case <-c.ctx.Done():
+						if !errors.Is(c.ctx.Err(), context.Canceled) {
+							// TODO: bad, log why
+						}
 						return
 					case <-ticker.C:
-						if errors.Is(c.ctx.Err(), context.Canceled) || errors.Is(c.ctx.Err(), context.DeadlineExceeded) {
-							// _ = c.cli.Agent().ServiceDeregister(svc.ID)
-							return
-						} else {
-							err := c.client.UpdateTTL(fmt.Sprintf("%s-ttl", info.ID), "pass", "pass")
+						err := c.client.UpdateTTL(fmt.Sprintf("%s-ttl", info.ID), "pass", "pass")
+						if err != nil {
+							time.Sleep(info.HealthEndpoint.HeartbeatInterval)
+							// try register again
+							err := c.client.RegisterSvc(registration)
 							if err != nil {
-								time.Sleep(info.HealthEndpoint.HeartbeatInterval)
-								// try register again
-								err := c.client.RegisterSvc(registration)
-								if err != nil {
-									// handle failure of register
-								}
+								// handle failure of register
 							}
+
 						}
 
 					}
@@ -148,10 +147,10 @@ func (c *RegisterClient) Register(regInfos []*registry.RemoteSvcRegInfo) error {
 }
 
 // Deregister service by service ID
-func (c *RegisterClient) Deregister(_ context.Context, ids ...string) error {
+func (c *RegisterClient) Deregister(ids ...string) error {
 	c.cancelFn()
 	if len(ids) == 0 {
-		ids = make([]string, len(c.registrations))
+		ids = make([]string, 0)
 		for id := range c.registrations {
 			ids = append(ids, id)
 		}
