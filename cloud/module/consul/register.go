@@ -9,6 +9,7 @@ import (
 
 	"github.com/c1emon/gcommon/cloud"
 	"github.com/c1emon/gcommon/cloud/registry"
+	"github.com/c1emon/gcommon/logx"
 	"github.com/hashicorp/consul/api"
 )
 
@@ -20,6 +21,7 @@ func NewRegisterClient(client *Client) (*RegisterClient, error) {
 		ctx:           ctx,
 		cancelFn:      calFn,
 		ttlWg:         &sync.WaitGroup{},
+		logger:        client.logger,
 	}, nil
 }
 
@@ -32,6 +34,8 @@ type RegisterClient struct {
 	ttlWg    *sync.WaitGroup
 
 	registrations map[string]*api.AgentServiceRegistration
+
+	logger logx.Logger
 }
 
 // registrationResolver resolve RemoteSvcRegInfo to consul's AgentServiceRegistration
@@ -111,26 +115,30 @@ func (c *RegisterClient) Register(regInfos []*registry.RemoteSvcRegInfo) error {
 				defer c.ttlWg.Done()
 				ticker := time.NewTicker(info.HealthEndpoint.HeartbeatInterval * 2)
 				defer ticker.Stop()
-
+				id := fmt.Sprintf("%s-ttl", info.ID)
 				for {
 					select {
 					case <-c.ctx.Done():
 						if !errors.Is(c.ctx.Err(), context.Canceled) {
-							// TODO: bad, log why
+							c.logger.Error("heartbeat handler exit error: %s", c.ctx.Err())
+						} else {
+							c.logger.Info("stop heartbeat handler %s success", id)
 						}
 						return
 					case <-ticker.C:
-						err := c.client.UpdateTTL(fmt.Sprintf("%s-ttl", info.ID), "pass", "pass")
+						err := c.client.UpdateTTL(id, "pass", "pass")
 						if err != nil {
 							time.Sleep(info.HealthEndpoint.HeartbeatInterval)
 							// try register again
+							c.logger.Warn("update heartbeat error: %s", err)
+							c.logger.Info("try re-register service %s", registration.ID)
 							err := c.client.RegisterSvc(registration)
 							if err != nil {
-								// handle failure of register
+								c.logger.Error("re-register service %s error: %s", registration.ID, err)
+							} else {
+								c.logger.Info("re-register service %s success", registration.ID)
 							}
-
 						}
-
 					}
 				}
 			}

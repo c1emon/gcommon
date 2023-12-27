@@ -16,17 +16,19 @@ type Client struct {
 	logger logx.Logger
 }
 
-func New(addr string) (*Client, error) {
+func New(addr string, logFactory logx.LoggerFactory) (*Client, error) {
 	cfg := api.DefaultConfig()
 	cfg.Address = addr
+	// DefaultConfigWithLogger
 
 	c, err := api.NewClient(cfg)
 	if err != nil {
 		return nil, err
 	}
 	return &Client{
-		cli: c,
-		ctx: context.Background(),
+		cli:    c,
+		ctx:    context.Background(),
+		logger: logFactory.Get("consul"),
 	}, nil
 }
 
