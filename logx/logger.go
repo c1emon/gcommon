@@ -13,23 +13,27 @@ type logOptions struct {
 
 type logOption util.Option[logOptions]
 
-func (o logOptions) GetCtx() context.Context {
-	return o.ctx
+func (o logOptions) GetCtx() (context.Context, bool) {
+	if o.ctx == nil {
+		return nil, false
+	}
+	return o.ctx, true
 }
 
-func (o logOptions) GetValues() any {
-	return o.values
+func (o logOptions) GetValues() (map[string]any, bool) {
+	if o.values == nil {
+		return nil, false
+	}
+	return o.values, true
 }
 
 func readOptions(opts []logOption) *logOptions {
 	lo := &logOptions{
-		ctx:    context.TODO(),
+		ctx:    nil,
 		values: nil,
 	}
-	if opts != nil {
-		for _, o := range opts {
-			o.Apply(lo)
-		}
+	for _, o := range opts {
+		o.Apply(lo)
 	}
 	return lo
 }

@@ -6,22 +6,18 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"reflect"
 	"sync"
 	"syscall"
 	"time"
 
 	"github.com/c1emon/gcommon/logx"
+	"github.com/c1emon/gcommon/service"
 	"golang.org/x/sync/errgroup"
 )
 
-type BackgroundService interface {
-	Run(ctx context.Context) error
-}
-
 // from https://github.com/grafana/grafana/blob/4cc72a22ad03132295ab3428ed9877ba2cb42eb2/pkg/server/server.go
-func New() (*Server, error) {
-	s, err := newServer()
+func New(repo *service.ServiceRepo, logger logx.Logger, servserverOptions ...serverOption) (*Server, error) {
+	s, err := newServer(repo, logger)
 	if err != nil {
 		return nil, err
 	}
@@ -30,10 +26,11 @@ func New() (*Server, error) {
 		return nil, err
 	}
 
+	fromOptions(s, servserverOptions...)
 	return s, nil
 }
 
-func newServer() (*Server, error) {
+func newServer(repo *service.ServiceRepo, logger logx.Logger) (*Server, error) {
 	rootCtx, shutdownFn := context.WithCancel(context.Background())
 	childRoutines, childCtx := errgroup.WithContext(rootCtx)
 
@@ -42,9 +39,13 @@ func newServer() (*Server, error) {
 		childRoutines:    childRoutines,
 		shutdownFn:       shutdownFn,
 		shutdownFinished: make(chan any),
-		// log:              logx.GetLogger(),
-		// cfg:                cfg,
-		backgroundServices: make([]BackgroundService, 0),
+		logger:           logger,
+
+		preRunFunc:   nil,
+		postRunFunc:  nil,
+		preStopFunc:  nil,
+		postStopFunc: nil,
+		svcRepo:      repo,
 	}
 
 	return s, nil
@@ -66,11 +67,12 @@ type Server struct {
 	// commit      string
 	// buildBranch string
 
-	backgroundServices []BackgroundService
-}
+	preRunFunc   func(context.Context) error
+	postRunFunc  func(context.Context) error
+	preStopFunc  func(context.Context) error
+	postStopFunc func(context.Context) error
 
-func (s *Server) RegistSvc(svc BackgroundService) {
-	s.backgroundServices = append(s.backgroundServices, svc)
+	svcRepo *service.ServiceRepo
 }
 
 func (s *Server) Init() error {
@@ -85,6 +87,38 @@ func (s *Server) Init() error {
 	return nil
 }
 
+func (s *Server) preRun(ctx context.Context) error {
+	if s.preRunFunc != nil {
+		s.logger.Debug("server pre run task")
+		return s.preRunFunc(ctx)
+	}
+	return nil
+}
+
+func (s *Server) postRun(ctx context.Context) error {
+	if s.postRunFunc != nil {
+		s.logger.Debug("server post run task")
+		return s.postRunFunc(ctx)
+	}
+	return nil
+}
+
+func (s *Server) preStop(ctx context.Context) error {
+	if s.preStopFunc != nil {
+		s.logger.Debug("server pre stop task")
+		return s.preStopFunc(ctx)
+	}
+	return nil
+}
+
+func (s *Server) postStop(ctx context.Context) error {
+	if s.postStopFunc != nil {
+		s.logger.Debug("server post stop task")
+		return s.postStopFunc(ctx)
+	}
+	return nil
+}
+
 func (s *Server) Run() error {
 	defer close(s.shutdownFinished)
 
@@ -92,36 +126,38 @@ func (s *Server) Run() error {
 		return err
 	}
 
-	services := s.backgroundServices
+	s.preRun(s.context)
+
 	// Start background services.
-	for _, svc := range services {
+	for _, svc := range s.svcRepo.Services() {
 
 		service := svc
-		svcName := reflect.TypeOf(service).String()
-
 		s.childRoutines.Go(func() error {
 			select {
+			// 如果已经Done了，就停止启动流程
 			case <-s.context.Done():
 				return s.context.Err()
 			default:
 			}
 
 			// start service
-			s.logger.Debug("Starting background service: %s", svcName)
-			err := service.Run(s.context)
+			s.logger.Debug("starting background service: %s", service.Name())
+			// block!
+			err := service.Run(s.context, 10)
 			// Do not return context.Canceled error since errgroup.Group only
 			// returns the first error to the caller - thus we can miss a more
 			// interesting error.
 			if err != nil && !errors.Is(err, context.Canceled) {
-				s.logger.Error("Stopped background service: %s for %s", "http server", err)
-				return fmt.Errorf("%s run error: %w", "http server", err)
+				s.logger.Error("stopped background service %s error: %s", service.Name(), err)
+				return fmt.Errorf("%s stop error: %w", service.Name(), err)
 			}
-			s.logger.Debug("Stopped background service %s for %s", svcName, err)
+			s.logger.Debug("stopped background service: %s", service.Name())
 			return nil
 		})
 
 	}
 
+	s.postRun(s.context)
 	return s.childRoutines.Wait()
 }
 
@@ -131,17 +167,19 @@ func (s *Server) Run() error {
 func (s *Server) Shutdown(ctx context.Context, reason string) error {
 	var err error
 	s.shutdownOnce.Do(func() {
-		s.logger.Info("Shutdown started: %s", reason)
+		s.logger.Info("shutdown started reason: %s", reason)
+		s.preStop(s.context)
 		// Call cancel func to stop background services.
 		s.shutdownFn()
 		// Wait for server to shut down
 		select {
 		case <-s.shutdownFinished:
-			s.logger.Debug("Finished waiting for server to shut down")
+			s.logger.Debug("finished waiting for server to shutdown")
 		case <-ctx.Done():
-			s.logger.Warn("Timed out while waiting for server to shut down")
+			s.logger.Warn("timed out while waiting for server to shutdown")
 			err = fmt.Errorf("timeout waiting for shutdown")
 		}
+		s.postStop(s.context)
 	})
 
 	return err
@@ -163,8 +201,8 @@ func (s *Server) ListenToSystemSignals(ctx context.Context) {
 		case sig := <-signalChan:
 			ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 			defer cancel()
-			if err := s.Shutdown(ctx, fmt.Sprintf("System signal: %s", sig)); err != nil {
-				fmt.Fprintf(os.Stderr, "Timed out waiting for server to shut down\n")
+			if err := s.Shutdown(ctx, fmt.Sprintf("system signal -> %s", sig)); err != nil {
+				s.logger.Error("timed out waiting for server to shutdown")
 			}
 			return
 		}

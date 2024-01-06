@@ -3,6 +3,7 @@ package util
 import (
 	"encoding/json"
 	"math/rand"
+	"net"
 	"time"
 )
 
@@ -20,4 +21,14 @@ func RandStr(length int) string {
 		result = append(result, bytes[rand.Intn(len(bytes))])
 	}
 	return string(result)
+}
+
+func GetOutboundIP() (net.IP, error) {
+	conn, err := net.Dial("udp", "8.8.8.8:80")
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+	localAddr := conn.LocalAddr().(*net.UDPAddr)
+	return localAddr.IP, nil
 }
