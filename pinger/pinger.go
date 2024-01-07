@@ -10,7 +10,7 @@ type Pinger interface {
 	Ping(ctx context.Context) *Stats
 }
 
-func NewPinger(host string, opts ...pingOption) *ICMPPinger {
+func NewICMPPinger(host string, opts ...pingOption) *ICMPPinger {
 	o := &pingOptions{
 		Timeout:  DefaultTimeout,
 		Interval: DefaultInterval,
