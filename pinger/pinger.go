@@ -53,7 +53,11 @@ func (p *Pinger) Ping(ctx context.Context) *Stats {
 		stats.Error = err
 		return stats
 	}
-	pinger.Statistics() // get send/receive/duplicate/rtt stats
+
+	statistics := pinger.Statistics() // get send/receive/duplicate/rtt stats
+	stats.Rtt = statistics.AvgRtt
+	stats.Address = statistics.Addr
+	stats.Loss = statistics.PacketLoss
 
 	stats.Reachable = true
 	return stats

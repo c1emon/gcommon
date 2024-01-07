@@ -70,4 +70,5 @@ type Stats struct {
 	Error     error         `json:"error"`
 	Rtt       time.Duration `json:"rtt"`
 	DnsRtt    time.Duration `json:"dns_rtt"`
+	Loss      float64       `json:"loss"`
 }
