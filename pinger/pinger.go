@@ -6,7 +6,11 @@ import (
 	probing "github.com/prometheus-community/pro-bing"
 )
 
-func NewPinger(host string, opts ...pingOption) *Pinger {
+type Pinger interface {
+	Ping(ctx context.Context) *Stats
+}
+
+func NewPinger(host string, opts ...pingOption) *ICMPPinger {
 	o := &pingOptions{
 		Timeout:  DefaultTimeout,
 		Interval: DefaultInterval,
@@ -19,7 +23,7 @@ func NewPinger(host string, opts ...pingOption) *Pinger {
 		v.Apply(o)
 	}
 
-	return &Pinger{
+	return &ICMPPinger{
 		host:   host,
 		option: o,
 	}
@@ -27,12 +31,12 @@ func NewPinger(host string, opts ...pingOption) *Pinger {
 
 // TODO: icmp ping
 // https://github.com/prometheus-community/pro-bing/blob/main/cmd/ping/ping.go
-type Pinger struct {
+type ICMPPinger struct {
 	host   string
 	option *pingOptions
 }
 
-func (p *Pinger) Ping(ctx context.Context) *Stats {
+func (p *ICMPPinger) Ping(ctx context.Context) *Stats {
 	var stats = &Stats{}
 	stats.Reachable = false
 

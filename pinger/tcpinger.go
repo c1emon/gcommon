@@ -36,7 +36,7 @@ type Tcpinger struct {
 func (p *Tcpinger) Ping(ctx context.Context) *Stats {
 
 	// Statistics
-	var stats Stats
+	stats := &Stats{}
 
 	var dnsStart time.Time
 
@@ -107,5 +107,5 @@ func (p *Tcpinger) Ping(ctx context.Context) *Stats {
 		stats.Address = conn.RemoteAddr().String()
 		stats.Error = tlsErr
 	}
-	return &stats
+	return stats
 }
