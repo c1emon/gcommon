@@ -9,14 +9,8 @@ import (
 	"time"
 )
 
-const (
-	DefaultCounter  = 4
-	DefaultInterval = time.Second
-	DefaultTimeout  = time.Second * 5
-)
-
-func NewTcpinger(host string, port int, opts ...tcpingOption) *Tcpinger {
-	o := &tcpingOptions{
+func NewTcpinger(host string, port int, opts ...pingOption) *Tcpinger {
+	o := &pingOptions{
 		Timeout: DefaultTimeout,
 		Dialer:  &net.Dialer{},
 		Tls:     false,
@@ -36,7 +30,7 @@ func NewTcpinger(host string, port int, opts ...tcpingOption) *Tcpinger {
 type Tcpinger struct {
 	host   string
 	port   int
-	option *tcpingOptions
+	option *pingOptions
 }
 
 func (p *Tcpinger) Ping(ctx context.Context) *Stats {
@@ -109,7 +103,7 @@ func (p *Tcpinger) Ping(ctx context.Context) *Stats {
 			stats.Address = oe.Addr.String()
 		}
 	} else {
-		stats.Connected = true
+		stats.Reachable = true
 		stats.Address = conn.RemoteAddr().String()
 		stats.Error = tlsErr
 	}

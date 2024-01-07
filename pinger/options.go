@@ -7,41 +7,67 @@ import (
 	"github.com/c1emon/gcommon/util"
 )
 
-type tcpingOption util.Option[tcpingOptions]
+const (
+	DefaultCount    = 1
+	DefaultInterval = time.Millisecond * time.Duration(500)
+	DefaultTimeout  = time.Second * time.Duration(3)
+)
 
-type tcpingOptions struct {
-	Timeout time.Duration
-	Dialer  *net.Dialer
-	Tls     bool
+type pingOption util.Option[pingOptions]
+
+type pingOptions struct {
+	Timeout  time.Duration
+	Interval time.Duration
+	Count    int
+	Dialer   *net.Dialer
+	Tls      bool
 }
 
-func WithTimeout(timeout time.Duration) tcpingOption {
-	return util.WrapFuncOption[tcpingOptions](
-		func(so *tcpingOptions) {
-			so.Timeout = timeout
+func WithTimeout(timeout time.Duration) pingOption {
+	return util.WrapFuncOption[pingOptions](
+		func(po *pingOptions) {
+			po.Timeout = timeout
 		})
 }
 
-func WithNetResolver(resolver *net.Resolver) tcpingOption {
-	return util.WrapFuncOption[tcpingOptions](
-		func(so *tcpingOptions) {
-			so.Dialer = &net.Dialer{
+func WithNetResolver(resolver *net.Resolver) pingOption {
+	return util.WrapFuncOption[pingOptions](
+		func(po *pingOptions) {
+			po.Dialer = &net.Dialer{
 				Resolver: resolver,
 			}
 		})
 }
 
-func EnableTls() tcpingOption {
-	return util.WrapFuncOption[tcpingOptions](
-		func(so *tcpingOptions) {
-			so.Tls = true
+func WithInterval(interval time.Duration) pingOption {
+	return util.WrapFuncOption[pingOptions](
+		func(po *pingOptions) {
+			po.Interval = interval
+		})
+}
+
+func WithCount(count int) pingOption {
+	return util.WrapFuncOption[pingOptions](
+		func(po *pingOptions) {
+			if count >= 1 {
+				po.Count = count
+			} else {
+				po.Count = 1
+			}
+		})
+}
+
+func EnableTls() pingOption {
+	return util.WrapFuncOption[pingOptions](
+		func(po *pingOptions) {
+			po.Tls = true
 		})
 }
 
 type Stats struct {
-	Connected bool          `json:"connected"`
+	Reachable bool          `json:"reachable"`
+	Address   string        `json:"address"`
 	Error     error         `json:"error"`
 	Rtt       time.Duration `json:"rtt"`
 	DnsRtt    time.Duration `json:"dns_rtt"`
-	Address   string        `json:"address"`
 }
