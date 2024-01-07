@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net"
-	"net/http/httptrace"
 	"time"
 )
 
@@ -36,18 +35,49 @@ type Tcpinger struct {
 func (p *Tcpinger) Ping(ctx context.Context) *Stats {
 
 	// Statistics
+	stats := make([]*Stats, 0)
+	stat := &Stats{}
+	avgRtt := time.Duration(0)
+	reachableCount := 0
+	for i := 0; i < p.option.Count; i++ {
+		s := p.ping(ctx)
+		time.Sleep(p.option.Interval)
+		stats = append(stats, s)
+		if s.Reachable {
+			stat.Reachable = true
+			stat.Address = s.Address
+			reachableCount += 1
+		}
+	}
+	for _, s := range stats {
+		avgRtt = s.Rtt
+	}
+	stat.Rtt = avgRtt / time.Duration(p.option.Count)
+	stat.Loss = 1.0 - float64(reachableCount/p.option.Count)
+	if stat.Loss < 0 {
+		stat.Loss = 0
+	}
+	if stat.Loss > 1 {
+		stat.Loss = 1
+	}
+
+	return stat
+}
+
+func (p *Tcpinger) ping(ctx context.Context) *Stats {
+	// Statistics
 	stats := &Stats{}
 
-	var dnsStart time.Time
+	// var dnsStart time.Time
 
-	start := time.Now()
 	var (
 		conn    net.Conn
 		err     error
 		tlsConn net.Conn
 		tlsErr  error
 	)
-
+	target := fmt.Sprintf("%s:%d", p.host, p.port)
+	start := time.Now()
 	if p.option.Tls {
 		// build tls connection
 		tlsDialer := &tls.Dialer{
@@ -56,19 +86,19 @@ func (p *Tcpinger) Ping(ctx context.Context) *Stats {
 				InsecureSkipVerify: true,
 			},
 		}
-		tlsCtx, cancel := context.WithTimeout(ctx, p.option.Timeout)
+		tlsCtx, cancel := context.WithTimeout(ctx, p.option.Timeout/2)
 		defer cancel()
 		// trace dns query
-		tlsCtx = httptrace.WithClientTrace(tlsCtx, &httptrace.ClientTrace{
-			DNSStart: func(info httptrace.DNSStartInfo) {
-				dnsStart = time.Now()
-			},
-			DNSDone: func(info httptrace.DNSDoneInfo) {
-				stats.DnsRtt = time.Since(dnsStart)
-			},
-		})
+		// tlsCtx = httptrace.WithClientTrace(tlsCtx, &httptrace.ClientTrace{
+		// 	DNSStart: func(info httptrace.DNSStartInfo) {
+		// 		dnsStart = time.Now()
+		// 	},
+		// 	DNSDone: func(info httptrace.DNSDoneInfo) {
+		// 		stats.DnsRtt = time.Since(dnsStart)
+		// 	},
+		// })
 
-		tlsConn, tlsErr = tlsDialer.DialContext(tlsCtx, "tcp", fmt.Sprintf("%s:%d", p.host, p.port))
+		tlsConn, tlsErr = tlsDialer.DialContext(tlsCtx, "tcp", target)
 
 		if tlsErr == nil {
 			conn = tlsConn
@@ -76,18 +106,18 @@ func (p *Tcpinger) Ping(ctx context.Context) *Stats {
 	}
 	if !p.option.Tls || tlsErr != nil {
 		// if tls failed, downgrade to plain tcp
-		tcpCtx, cancel := context.WithTimeout(ctx, p.option.Timeout)
+		tcpCtx, cancel := context.WithTimeout(ctx, p.option.Timeout/2)
 		defer cancel()
 		// trace dns query
-		tcpCtx = httptrace.WithClientTrace(tcpCtx, &httptrace.ClientTrace{
-			DNSStart: func(info httptrace.DNSStartInfo) {
-				dnsStart = time.Now()
-			},
-			DNSDone: func(info httptrace.DNSDoneInfo) {
-				stats.DnsRtt = time.Since(dnsStart)
-			},
-		})
-		conn, err = p.option.Dialer.DialContext(tcpCtx, "tcp", fmt.Sprintf("%s:%d", p.host, p.port))
+		// tcpCtx = httptrace.WithClientTrace(tcpCtx, &httptrace.ClientTrace{
+		// 	DNSStart: func(info httptrace.DNSStartInfo) {
+		// 		dnsStart = time.Now()
+		// 	},
+		// 	DNSDone: func(info httptrace.DNSDoneInfo) {
+		// 		stats.DnsRtt = time.Since(dnsStart)
+		// 	},
+		// })
+		conn, err = p.option.Dialer.DialContext(tcpCtx, "tcp", target)
 	}
 	defer func() {
 		if conn != nil {
