@@ -10,7 +10,7 @@ import (
 )
 
 func TestTcpinger(t *testing.T) {
-	pinger := pinger.NewTcpinger("baidu.com", 80, pinger.WithTimeout(time.Second))
+	pinger := pinger.NewTcpinger("baidu.com", 80, pinger.WithTimeout(time.Second), pinger.WithCount(10))
 	st := pinger.Ping(context.Background())
 	fmt.Printf("%v", st)
 }
