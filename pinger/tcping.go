@@ -15,7 +15,7 @@ const (
 	DefaultTimeout  = time.Second * 5
 )
 
-func NewTcpinger(host string, port int, opts ...tcpingOption) *Ping {
+func NewTcpinger(host string, port int, opts ...tcpingOption) *Tcpinger {
 	o := &tcpingOptions{
 		Timeout: DefaultTimeout,
 		Dialer:  &net.Dialer{},
@@ -26,20 +26,20 @@ func NewTcpinger(host string, port int, opts ...tcpingOption) *Ping {
 		v.Apply(o)
 	}
 
-	return &Ping{
+	return &Tcpinger{
 		host:   host,
 		port:   port,
 		option: o,
 	}
 }
 
-type Ping struct {
+type Tcpinger struct {
 	host   string
 	port   int
 	option *tcpingOptions
 }
 
-func (p *Ping) Ping(ctx context.Context) *Stats {
+func (p *Tcpinger) Ping(ctx context.Context) *Stats {
 
 	// Statistics
 	var stats Stats
@@ -81,6 +81,7 @@ func (p *Ping) Ping(ctx context.Context) *Stats {
 		}
 	}
 	if !p.option.Tls || tlsErr != nil {
+		// if tls failed, downgrade to plain tcp
 		tcpCtx, cancel := context.WithTimeout(ctx, p.option.Timeout)
 		defer cancel()
 		// trace dns query
@@ -104,7 +105,6 @@ func (p *Ping) Ping(ctx context.Context) *Stats {
 
 	if err != nil {
 		stats.Error = err
-
 		if oe, ok := err.(*net.OpError); ok && oe.Addr != nil {
 			stats.Address = oe.Addr.String()
 		}
