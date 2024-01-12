@@ -39,7 +39,10 @@ func newServer(repo *service.ServiceRepo, logger logx.Logger) (*Server, error) {
 		childRoutines:    childRoutines,
 		shutdownFn:       shutdownFn,
 		shutdownFinished: make(chan any),
-		logger:           logger,
+		shutdownTimeout:  time.Microsecond * time.Duration(500),
+		shutdownWG:       &sync.WaitGroup{},
+
+		logger: logger,
 
 		preRunFunc:   nil,
 		postRunFunc:  nil,
@@ -56,11 +59,14 @@ type Server struct {
 	shutdownFn    context.CancelFunc
 	childRoutines *errgroup.Group
 	logger        logx.Logger
-	// cfg              *setting.Config
+
 	shutdownOnce     sync.Once
 	shutdownFinished chan any
+	shutdownTimeout  time.Duration
 	isInitialized    bool
 	mtx              sync.Mutex
+
+	shutdownWG *sync.WaitGroup
 
 	// pidFile     string
 	// version     string
@@ -120,6 +126,7 @@ func (s *Server) postStop(ctx context.Context) error {
 }
 
 func (s *Server) Run() error {
+	defer s.shutdownWG.Wait()
 	defer close(s.shutdownFinished)
 
 	if err := s.Init(); err != nil {
@@ -165,6 +172,7 @@ func (s *Server) Run() error {
 // running background services. Since Run blocks Shutdown supposed to
 // be run from a separate goroutine.
 func (s *Server) Shutdown(ctx context.Context, reason string) error {
+	defer s.shutdownWG.Done()
 	var err error
 	s.shutdownOnce.Do(func() {
 		s.logger.Info("shutdown started reason: %s", reason)
@@ -175,6 +183,7 @@ func (s *Server) Shutdown(ctx context.Context, reason string) error {
 		select {
 		case <-s.shutdownFinished:
 			s.logger.Debug("finished waiting for server to shutdown")
+			s.logger.Info("server shutdown")
 		case <-ctx.Done():
 			s.logger.Warn("timed out while waiting for server to shutdown")
 			err = fmt.Errorf("timeout waiting for shutdown")
@@ -199,8 +208,9 @@ func (s *Server) ListenToSystemSignals(ctx context.Context) {
 			// 	fmt.Fprintf(os.Stderr, "Failed to reload loggers: %s\n", err)
 			// }
 		case sig := <-signalChan:
-			ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+			ctx, cancel := context.WithTimeout(ctx, s.shutdownTimeout)
 			defer cancel()
+			s.shutdownWG.Add(1)
 			if err := s.Shutdown(ctx, fmt.Sprintf("system signal -> %s", sig)); err != nil {
 				s.logger.Error("timed out waiting for server to shutdown")
 			}
