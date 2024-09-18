@@ -12,6 +12,11 @@ type Response[T any] struct {
 	Data T      `json:"data,omitempty"`
 }
 
+func (r *Response[T]) WithError(e error) *Response[T] {
+	r.Msg = e.Error()
+	return r
+}
+
 func NewResponse[T any](c int) *Response[T] {
 	return &Response[T]{Code: c, Ts: time.Now().Unix()}
 }
