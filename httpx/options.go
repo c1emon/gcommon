@@ -23,6 +23,12 @@ func WithUA(ua string) *util.FuncOption[Client] {
 	})
 }
 
+func WithHeader(key, val string) *util.FuncOption[Client] {
+	return util.WrapFuncOption(func(client *Client) {
+		client.SetCommonHeader(key, val)
+	})
+}
+
 func WithTimeOut(t time.Duration) *util.FuncOption[Client] {
 	return util.WrapFuncOption(func(client *Client) {
 		client.SetTimeout(t)

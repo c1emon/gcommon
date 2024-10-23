@@ -17,6 +17,10 @@ func (r *ResponseVO[T]) WithError(e error) *ResponseVO[T] {
 	return r
 }
 
+func (r *ResponseVO[T]) HasError() bool {
+	return r.Code != 0
+}
+
 func NewResponse[T any](c int) *ResponseVO[T] {
 	return &ResponseVO[T]{Code: c, Ts: time.Now().Unix()}
 }
