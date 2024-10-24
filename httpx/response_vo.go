@@ -1,8 +1,12 @@
 package httpx
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
 	"time"
+
+	"github.com/c1emon/gcommon/errorx"
 )
 
 type ResponseVO[T any] struct {
@@ -62,4 +66,24 @@ func WarpPagination[T any](resp *ResponseVO[[]T]) *PaginationResponse[T] {
 	return &PaginationResponse[T]{
 		ResponseVO: resp,
 	}
+}
+
+func ErrorInterceptor(client *Client, resp *Response) error {
+
+	b, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return errorx.NewIOError(err)
+	}
+
+	r := &ResponseVO[any]{}
+	err = json.Unmarshal(b, r)
+	if err != nil {
+		return errorx.NewJsonError(err)
+	}
+
+	if r.HasError() {
+		return errorx.NewHttpError(resp.StatusCode, r.Code, r.Msg, r.Data)
+	}
+
+	return nil
 }

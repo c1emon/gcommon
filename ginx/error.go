@@ -15,12 +15,11 @@ func ErrorHandler() gin.HandlerFunc {
 		// Process request
 		c.Next()
 		for _, e := range c.Errors {
-			if err, ok := e.Err.(errorx.ErrorX); ok {
+			if err, ok := e.Err.(errorx.HttpError); ok {
 				c.JSON(err.HttpStatus(), httpx.NewResponse[any](err.Code()).WithError(err))
 			} else {
 				c.JSON(http.StatusBadRequest, httpx.NewResponse[any](1001).WithError(e))
 			}
-			return
 		}
 
 	}
