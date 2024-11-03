@@ -25,45 +25,49 @@ func (r *ResponseVO[T]) HasError() bool {
 	return r.Code != 0
 }
 
-func NewResponse[T any](c int) *ResponseVO[T] {
+func NewResponseVO[T any](c int) *ResponseVO[T] {
 	return &ResponseVO[T]{Code: c, Ts: time.Now().Unix()}
 }
 
 func ResponseOK[T any]() *ResponseVO[T] {
-	return NewResponse[T](0)
+	return NewResponseVO[T](0)
 }
 
 func ResponseBadParam[T any](param, reason string) *ResponseVO[T] {
-	resp := NewResponse[T](1001)
+	resp := NewResponseVO[T](1001)
 	resp.Msg = fmt.Sprintf("bad param [%s]: %s", param, reason)
 	return resp
 }
 
 func ResponseNotFound[T any](id string) *ResponseVO[T] {
-	resp := NewResponse[T](1002)
+	resp := NewResponseVO[T](1002)
 	resp.Msg = fmt.Sprintf("[%s] not found", id)
 	return resp
 }
 
 func ResponseDuplicateKey[T any](key string) *ResponseVO[T] {
-	resp := NewResponse[T](1003)
+	resp := NewResponseVO[T](1003)
 	resp.Msg = fmt.Sprintf("duplicate key [%s]", key)
 	return resp
 }
 
 func ResponseNotAllowed[T any](res string) *ResponseVO[T] {
-	resp := NewResponse[T](1004)
+	resp := NewResponseVO[T](1004)
 	resp.Msg = fmt.Sprintf("[%s] not allowed", res)
 	return resp
 }
 
-type PaginationResponse[T any] struct {
+type PageResponseVO[T any] struct {
 	*ResponseVO[[]T]
 	*Pagination
 }
 
-func WarpPagination[T any](resp *ResponseVO[[]T]) *PaginationResponse[T] {
-	return &PaginationResponse[T]{
+func NewPageResponseVO[T any](c int) *PageResponseVO[T] {
+	return &PageResponseVO[T]{ResponseVO: NewResponseVO[[]T](c)}
+}
+
+func WarpPagination[T any](resp *ResponseVO[[]T]) *PageResponseVO[T] {
+	return &PageResponseVO[T]{
 		ResponseVO: resp,
 	}
 }
