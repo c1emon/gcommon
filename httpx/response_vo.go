@@ -9,6 +9,10 @@ import (
 	"github.com/c1emon/gcommon/errorx"
 )
 
+type ResponseTypes[T any] interface {
+	ResponseVO[T] | PageResponseVO[T]
+}
+
 type ResponseVO[T any] struct {
 	Code int    `json:"code"`
 	Msg  string `json:"msg,omitempty"`
@@ -63,7 +67,7 @@ type PageResponseVO[T any] struct {
 }
 
 func NewPageResponseVO[T any](c int) *PageResponseVO[T] {
-	return &PageResponseVO[T]{ResponseVO: NewResponseVO[[]T](c)}
+	return &PageResponseVO[T]{ResponseVO: NewResponseVO[[]T](c), Pagination: &Pagination{}}
 }
 
 func WarpPagination[T any](resp *ResponseVO[[]T]) *PageResponseVO[T] {
