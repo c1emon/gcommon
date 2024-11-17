@@ -2,10 +2,11 @@ package data
 
 import (
 	"fmt"
+	"strings"
 	"time"
 )
 
-const DefaultTimeFormat = "2006-01-02 15:04:05"
+const DefaultTimeFormat = time.RFC3339
 
 var timeFormat = DefaultTimeFormat
 
@@ -23,7 +24,7 @@ type Time struct {
 
 func (t *Time) UnmarshalJSON(data []byte) error {
 
-	parsedTime, err := time.ParseInLocation(timeFormat, string(data), time.Local)
+	parsedTime, err := time.ParseInLocation(timeFormat, strings.Trim(string(data), "\""), time.Local)
 	if err != nil {
 		return err
 	}
