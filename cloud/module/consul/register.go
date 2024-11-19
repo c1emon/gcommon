@@ -4,12 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"sync"
 	"time"
 
 	"github.com/c1emon/gcommon/cloud"
 	"github.com/c1emon/gcommon/cloud/registry"
-	"github.com/c1emon/gcommon/logx"
 	"github.com/hashicorp/consul/api"
 )
 
@@ -35,7 +35,7 @@ type RegisterClient struct {
 
 	registrations map[string]*api.AgentServiceRegistration
 
-	logger logx.Logger
+	logger *slog.Logger
 }
 
 // registrationResolver resolve RemoteSvcRegInfo to consul's AgentServiceRegistration
@@ -109,7 +109,8 @@ func (c *RegisterClient) Register(regInfos []*registry.RemoteSvcRegInfo) error {
 		if err != nil {
 			return err
 		}
-		c.logger.Info("register server %s", registration.Name)
+
+		c.logger.Info(fmt.Sprintf("consul register server %s", registration.Name))
 		if info.HealthEndpoint != nil && info.HealthEndpoint.Heartbeat {
 			ttlFn := func() {
 				c.ttlWg.Add(1)
@@ -121,9 +122,9 @@ func (c *RegisterClient) Register(regInfos []*registry.RemoteSvcRegInfo) error {
 					select {
 					case <-c.ctx.Done():
 						if !errors.Is(c.ctx.Err(), context.Canceled) {
-							c.logger.Error("heartbeat handler exit error: %s", c.ctx.Err())
+							c.logger.Error("consul heartbeat handler exited", "error", c.ctx.Err())
 						} else {
-							c.logger.Info("stop heartbeat handler %s success", id)
+							c.logger.Info(fmt.Sprintf("stop heartbeat handler %s success", id))
 						}
 						return
 					case <-ticker.C:
@@ -131,13 +132,13 @@ func (c *RegisterClient) Register(regInfos []*registry.RemoteSvcRegInfo) error {
 						if err != nil {
 							time.Sleep(info.HealthEndpoint.HeartbeatInterval)
 							// try register again
-							c.logger.Warn("update heartbeat error: %s", err)
-							c.logger.Info("try re-register service %s", registration.ID)
+							c.logger.Warn("update heartbeat failed", "error", err)
+							c.logger.Info(fmt.Sprintf("try re-register service %s", registration.ID))
 							err := c.client.RegisterSvc(registration)
 							if err != nil {
-								c.logger.Error("re-register service %s error: %s", registration.ID, err)
+								c.logger.Error("re-register service failed", "id", registration.ID, "error", err)
 							} else {
-								c.logger.Info("re-register service %s success", registration.ID)
+								c.logger.Info("re-register service success", "id", registration.ID)
 							}
 						}
 					}

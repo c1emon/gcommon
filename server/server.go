@@ -4,19 +4,19 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
 	"time"
 
-	"github.com/c1emon/gcommon/logx"
 	"github.com/c1emon/gcommon/service"
 	"golang.org/x/sync/errgroup"
 )
 
 // from https://github.com/grafana/grafana/blob/4cc72a22ad03132295ab3428ed9877ba2cb42eb2/pkg/server/server.go
-func New(repo *service.ServiceRepo, logger logx.Logger, servserverOptions ...serverOption) (*Server, error) {
+func New(repo *service.ServiceRepo, logger *slog.Logger, servserverOptions ...serverOption) (*Server, error) {
 	s, err := newServer(repo, logger)
 	if err != nil {
 		return nil, err
@@ -30,7 +30,7 @@ func New(repo *service.ServiceRepo, logger logx.Logger, servserverOptions ...ser
 	return s, nil
 }
 
-func newServer(repo *service.ServiceRepo, logger logx.Logger) (*Server, error) {
+func newServer(repo *service.ServiceRepo, logger *slog.Logger) (*Server, error) {
 	rootCtx, shutdownFn := context.WithCancel(context.Background())
 	childRoutines, childCtx := errgroup.WithContext(rootCtx)
 
@@ -39,7 +39,7 @@ func newServer(repo *service.ServiceRepo, logger logx.Logger) (*Server, error) {
 		childRoutines:    childRoutines,
 		shutdownFn:       shutdownFn,
 		shutdownFinished: make(chan any),
-		shutdownTimeout:  time.Microsecond * time.Duration(500),
+		shutdownTimeout:  time.Second * time.Duration(12),
 		shutdownWG:       &sync.WaitGroup{},
 
 		logger: logger,
@@ -58,7 +58,7 @@ type Server struct {
 	context       context.Context
 	shutdownFn    context.CancelFunc
 	childRoutines *errgroup.Group
-	logger        logx.Logger
+	logger        *slog.Logger
 
 	shutdownOnce     sync.Once
 	shutdownFinished chan any
@@ -95,7 +95,7 @@ func (s *Server) Init() error {
 
 func (s *Server) preRun(ctx context.Context) error {
 	if s.preRunFunc != nil {
-		s.logger.Debug("server pre run task")
+		s.logger.Debug("start server pre run task")
 		return s.preRunFunc(ctx)
 	}
 	return nil
@@ -103,7 +103,7 @@ func (s *Server) preRun(ctx context.Context) error {
 
 func (s *Server) postRun(ctx context.Context) error {
 	if s.postRunFunc != nil {
-		s.logger.Debug("server post run task")
+		s.logger.Debug("start server post run task")
 		return s.postRunFunc(ctx)
 	}
 	return nil
@@ -111,7 +111,7 @@ func (s *Server) postRun(ctx context.Context) error {
 
 func (s *Server) preStop(ctx context.Context) error {
 	if s.preStopFunc != nil {
-		s.logger.Debug("server pre stop task")
+		s.logger.Debug("start server pre stop task")
 		return s.preStopFunc(ctx)
 	}
 	return nil
@@ -119,7 +119,7 @@ func (s *Server) preStop(ctx context.Context) error {
 
 func (s *Server) postStop(ctx context.Context) error {
 	if s.postStopFunc != nil {
-		s.logger.Debug("server post stop task")
+		s.logger.Debug("start server post stop task")
 		return s.postStopFunc(ctx)
 	}
 	return nil
@@ -148,17 +148,17 @@ func (s *Server) Run() error {
 			}
 
 			// start service
-			s.logger.Debug("starting background service: %s", service.Name())
+			s.logger.Debug("starting background service", "name", service.Name())
 			// block!
 			err := service.Run(s.context, 10)
 			// Do not return context.Canceled error since errgroup.Group only
 			// returns the first error to the caller - thus we can miss a more
 			// interesting error.
 			if err != nil && !errors.Is(err, context.Canceled) {
-				s.logger.Error("stopped background service %s error: %s", service.Name(), err)
+				s.logger.Error("stopp background service failed", "name", service.Name(), "error", err)
 				return fmt.Errorf("%s stop error: %w", service.Name(), err)
 			}
-			s.logger.Debug("stopped background service: %s", service.Name())
+			s.logger.Debug("stopped background service", "name", service.Name())
 			return nil
 		})
 
@@ -175,17 +175,16 @@ func (s *Server) Shutdown(ctx context.Context, reason string) error {
 	defer s.shutdownWG.Done()
 	var err error
 	s.shutdownOnce.Do(func() {
-		s.logger.Info("shutdown started reason: %s", reason)
+		s.logger.Info("shutdown started", "reason", reason)
 		s.preStop(s.context)
 		// Call cancel func to stop background services.
 		s.shutdownFn()
 		// Wait for server to shut down
 		select {
 		case <-s.shutdownFinished:
-			s.logger.Debug("finished waiting for server to shutdown")
-			s.logger.Info("server shutdown")
+			s.logger.Info("server shutdown success")
 		case <-ctx.Done():
-			s.logger.Warn("timed out while waiting for server to shutdown")
+			s.logger.Error("timed out while waiting for server to shutdown")
 			err = fmt.Errorf("timeout waiting for shutdown")
 		}
 		s.postStop(s.context)

@@ -1,9 +1,9 @@
 package gormx
 
 import (
+	"log/slog"
 	"strings"
 
-	"github.com/c1emon/gcommon/logx"
 	_ "github.com/lib/pq"
 	"gorm.io/driver/mysql"
 	"gorm.io/driver/postgres"
@@ -50,8 +50,7 @@ type DB struct {
 	*gorm.DB
 }
 
-func New(driverName DriverType, dsn string, loggerFactory logx.LoggerFactory) *DB {
-	logger := logx.NewGormLogger(loggerFactory)
+func New(driverName DriverType, dsn string, logger *slog.Logger) *DB {
 
 	var dialector gorm.Dialector
 	switch driverName {
@@ -63,15 +62,15 @@ func New(driverName DriverType, dsn string, loggerFactory logx.LoggerFactory) *D
 		dialector = sqlite.Open(dsn)
 	case Unknown:
 	default:
-		logger.Panic("unknown driver type: %s", driverName)
+		logger.Error("unknown gorm driver type", "driver", driverName)
+		return nil
 	}
 
-	db, err := gorm.Open(dialector, &gorm.Config{
-		Logger: logger,
-	})
+	db, err := gorm.Open(dialector, &gorm.Config{})
 
 	if err != nil {
-		logger.Panic("unable connect to %s: %s", driverName, err)
+		logger.Error("connect to db failed", "driver", driverName, "error", err)
+		return nil
 	}
 
 	return &DB{

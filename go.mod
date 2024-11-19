@@ -3,7 +3,10 @@ module github.com/c1emon/gcommon
 go 1.23
 
 require (
+	github.com/imroc/req/v3 v3.48.0
+	github.com/phsym/console-slog v0.3.1
 	github.com/prometheus-community/pro-bing v0.4.1
+	github.com/samber/slog-logrus/v2 v2.5.0
 	github.com/sirupsen/logrus v1.9.3
 	golang.org/x/crypto v0.27.0
 	gorm.io/gorm v1.25.12
@@ -13,7 +16,6 @@ require (
 	filippo.io/edwards25519 v1.1.0 // indirect
 	github.com/andybalholm/brotli v1.1.0 // indirect
 	github.com/armon/go-metrics v0.4.1 // indirect
-	github.com/aws/smithy-go v1.21.0 // indirect
 	github.com/bytedance/sonic v1.12.2 // indirect
 	github.com/bytedance/sonic/loader v0.2.0 // indirect
 	github.com/cloudflare/circl v1.4.0 // indirect
@@ -37,7 +39,6 @@ require (
 	github.com/hashicorp/go-rootcerts v1.0.2 // indirect
 	github.com/hashicorp/golang-lru v1.0.2 // indirect
 	github.com/hashicorp/serf v0.10.1 // indirect
-	github.com/imroc/req/v3 v3.48.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
 	github.com/jackc/pgx/v5 v5.7.1 // indirect
@@ -61,6 +62,8 @@ require (
 	github.com/quic-go/quic-go v0.47.0 // indirect
 	github.com/refraction-networking/utls v1.6.7 // indirect
 	github.com/rogpeppe/go-internal v1.11.0 // indirect
+	github.com/samber/lo v1.44.0 // indirect
+	github.com/samber/slog-common v0.17.0 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.2.12 // indirect
 	go.opentelemetry.io/otel v1.30.0 // indirect
@@ -72,14 +75,14 @@ require (
 	golang.org/x/net v0.29.0 // indirect
 	golang.org/x/text v0.18.0 // indirect
 	golang.org/x/tools v0.25.0 // indirect
-	google.golang.org/protobuf v1.34.1 // indirect
+	google.golang.org/protobuf v1.34.2 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
 require (
 	github.com/fanjindong/go-cache v0.0.5
-	github.com/fatih/color v1.17.0
-	github.com/gin-gonic/gin v1.9.1
+	github.com/fatih/color v1.17.0 // indirect
+	github.com/gin-gonic/gin v1.10.0
 	github.com/hashicorp/consul/api v1.27.2
 	github.com/hellofresh/health-go/v5 v5.5.3
 	github.com/lib/pq v1.10.9
@@ -87,7 +90,6 @@ require (
 	github.com/pkg/errors v0.9.1
 	golang.org/x/sync v0.8.0
 	golang.org/x/sys v0.25.0 // indirect
-	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	gorm.io/driver/mysql v1.5.7
 	gorm.io/driver/postgres v1.5.9
 	gorm.io/driver/sqlite v1.5.6

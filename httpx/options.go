@@ -38,6 +38,7 @@ func WithTimeOut(t time.Duration) *util.FuncOption[Client] {
 // TODO: adapt for slog
 func WithLogger(l *slog.Logger) *util.FuncOption[Client] {
 	return util.WrapFuncOption(func(client *Client) {
+
 		client.SetLogger(nil)
 	})
 }
