@@ -2,8 +2,8 @@ package consul
 
 import (
 	"context"
+	"log/slog"
 
-	"github.com/c1emon/gcommon/logx"
 	"github.com/hashicorp/consul/api"
 )
 
@@ -13,13 +13,12 @@ type Client struct {
 
 	ctx context.Context
 
-	logger logx.Logger
+	logger *slog.Logger
 }
 
-func New(addr string, logFactory logx.LoggerFactory) (*Client, error) {
+func New(addr string, logger *slog.Logger) (*Client, error) {
 	cfg := api.DefaultConfig()
 	cfg.Address = addr
-	// DefaultConfigWithLogger
 
 	c, err := api.NewClient(cfg)
 	if err != nil {
@@ -28,7 +27,7 @@ func New(addr string, logFactory logx.LoggerFactory) (*Client, error) {
 	return &Client{
 		cli:    c,
 		ctx:    context.Background(),
-		logger: logFactory.Get("consul"),
+		logger: logger,
 	}, nil
 }
 

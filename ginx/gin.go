@@ -1,12 +1,12 @@
 package ginx
 
 import (
-	"github.com/c1emon/gcommon/logx"
+	"log/slog"
+
 	"github.com/gin-gonic/gin"
 )
 
-func New(loggerFactory logx.LoggerFactory) *gin.Engine {
-	logger := loggerFactory.Get("gin")
+func New(logger *slog.Logger) *gin.Engine {
 
 	gin.SetMode(gin.DebugMode)
 	eng := gin.New()
