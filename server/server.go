@@ -39,7 +39,7 @@ func newServer(repo *service.ServiceRepo, logger *slog.Logger) (*Server, error) 
 		childRoutines:    childRoutines,
 		shutdownFn:       shutdownFn,
 		shutdownFinished: make(chan any),
-		shutdownTimeout:  time.Microsecond * time.Duration(500),
+		shutdownTimeout:  time.Second * time.Duration(12),
 		shutdownWG:       &sync.WaitGroup{},
 
 		logger: logger,

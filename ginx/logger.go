@@ -7,7 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func LogrusLogger(logger *slog.Logger) gin.HandlerFunc {
+func Logger(logger *slog.Logger) gin.HandlerFunc {
 
 	return func(c *gin.Context) {
 

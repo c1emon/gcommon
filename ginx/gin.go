@@ -1,16 +1,22 @@
 package ginx
 
 import (
-	"log/slog"
-
+	"github.com/c1emon/gcommon/util"
 	"github.com/gin-gonic/gin"
 )
 
-func New(logger *slog.Logger) *gin.Engine {
+func New(opts ...*util.FuncOption[gin.Engine]) *gin.Engine {
 
-	gin.SetMode(gin.DebugMode)
 	eng := gin.New()
-	eng.Use(LogrusLogger(logger), ErrorHandler(), Recovery(logger))
+	for _, opt := range opts {
+		opt.Apply(eng)
+	}
 
 	return eng
+}
+
+func WithMiddleware(h gin.HandlerFunc) *util.FuncOption[gin.Engine] {
+	return util.WrapFuncOption(func(eng *gin.Engine) {
+		eng.Use(h)
+	})
 }
