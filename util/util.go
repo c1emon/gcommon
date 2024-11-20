@@ -9,6 +9,13 @@ import (
 	"time"
 )
 
+var r *rand.Rand
+
+func init() {
+	source := rand.NewSource(time.Now().UnixNano() + int64(rand.Intn(100)))
+	r = rand.New(source)
+}
+
 var cnNums = [...]string{"零", "一", "二", "三", "四", "五", "六", "七", "八", "九"}
 
 // Num2No 数字序号转中文
@@ -39,9 +46,8 @@ func RandStr(length int) string {
 	str := "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 	bytes := []byte(str)
 	result := []byte{}
-	rand.Seed(time.Now().UnixNano() + int64(rand.Intn(100)))
 	for i := 0; i < length; i++ {
-		result = append(result, bytes[rand.Intn(len(bytes))])
+		result = append(result, bytes[r.Intn(len(bytes))])
 	}
 	return string(result)
 }

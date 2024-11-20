@@ -66,8 +66,8 @@ func PostStopFunc(f func(context.Context) error) serverOption {
 func WithShutdownTimeout(timeout time.Duration) serverOption {
 	return util.WrapFuncOption[serverOptions](
 		func(so *serverOptions) {
-			if timeout < time.Duration(500)*time.Microsecond {
-				timeout = time.Duration(500) * time.Microsecond
+			if timeout < time.Duration(2)*time.Second {
+				timeout = time.Duration(2) * time.Second
 			}
 			so.shutdownTimeout = timeout
 		})

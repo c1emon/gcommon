@@ -16,7 +16,7 @@ type Service interface {
 }
 
 type ServiceRunner interface {
-	Run(ctx context.Context, timeout int) error
+	Run(ctx context.Context, timeout time.Duration) error
 	Name() string
 }
 
@@ -41,7 +41,7 @@ func (s *defaultRunableService) Name() string {
 	return s.svc.Name()
 }
 
-func (s *defaultRunableService) Run(ctx context.Context, timeout int) error {
+func (s *defaultRunableService) Run(ctx context.Context, timeout time.Duration) error {
 	s.wg.Add(1)
 	var err error
 
@@ -58,7 +58,7 @@ func (s *defaultRunableService) Run(ctx context.Context, timeout int) error {
 		<-ctx.Done()
 
 		// shutdown server here
-		timeoutCtx, cancelFn := context.WithTimeout(context.Background(), time.Duration(timeout)*time.Second)
+		timeoutCtx, cancelFn := context.WithTimeout(context.Background(), timeout)
 		defer cancelFn()
 
 		if err = s.svc.Stop(timeoutCtx); err != nil {

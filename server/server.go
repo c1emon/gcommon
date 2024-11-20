@@ -39,7 +39,7 @@ func newServer(repo *service.ServiceRepo, logger *slog.Logger) (*Server, error) 
 		childRoutines:    childRoutines,
 		shutdownFn:       shutdownFn,
 		shutdownFinished: make(chan any),
-		shutdownTimeout:  time.Second * time.Duration(12),
+		shutdownTimeout:  time.Second * time.Duration(5),
 		shutdownWG:       &sync.WaitGroup{},
 
 		logger: logger,
@@ -150,7 +150,7 @@ func (s *Server) Run() error {
 			// start service
 			s.logger.Debug("starting background service", "name", service.Name())
 			// block!
-			err := service.Run(s.context, 10)
+			err := service.Run(s.context, s.shutdownTimeout-time.Second)
 			// Do not return context.Canceled error since errgroup.Group only
 			// returns the first error to the caller - thus we can miss a more
 			// interesting error.
