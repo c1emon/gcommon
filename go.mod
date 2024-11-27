@@ -83,7 +83,7 @@ require (
 	github.com/fanjindong/go-cache v0.0.5
 	github.com/fatih/color v1.17.0 // indirect
 	github.com/gin-gonic/gin v1.10.0
-	github.com/hashicorp/consul/api v1.27.2
+	github.com/hashicorp/consul/api v1.30.0
 	github.com/hellofresh/health-go/v5 v5.5.3
 	github.com/lib/pq v1.10.9
 	github.com/lucsky/cuid v1.2.1

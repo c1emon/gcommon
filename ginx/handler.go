@@ -16,9 +16,9 @@ func ErrorHandler() gin.HandlerFunc {
 		c.Next()
 		for _, e := range c.Errors {
 			if err, ok := e.Err.(errorx.HttpError); ok {
-				c.JSON(err.HttpStatus(), httpx.NewResponseVO[any](err.Code()).WithError(err))
+				c.JSON(err.HttpStatus(), httpx.NewMsgResult(err.Code(), e.Error()))
 			} else {
-				c.JSON(http.StatusBadRequest, httpx.NewResponseVO[any](1001).WithError(e))
+				c.JSON(http.StatusBadRequest, httpx.NewMsgResult(-1, e.Error()))
 			}
 		}
 
