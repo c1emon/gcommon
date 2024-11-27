@@ -43,8 +43,12 @@ func NewMsgResult(c int, msg string) *MsgResult {
 	}
 }
 
-func NewResultOK[T any](msg string, data T) *Result[T] {
-	return NewResult[T](0, msg, data)
+func NewResultMsgOK[T any](msg string, data T) *Result[T] {
+	return NewResult(0, msg, data)
+}
+
+func NewResultOK[T any](data T) *Result[T] {
+	return NewResult(0, "ok", data)
 }
 
 // func ResponseBadParam[T any](param, reason string) *Result[T] {
