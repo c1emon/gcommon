@@ -25,6 +25,16 @@ func (r *Result[T]) HasError() bool {
 	return r.Code != 0
 }
 
+func NewEmptyResult[T any]() *Result[T] {
+	return &Result[T]{
+		MsgResult: MsgResult{
+			Code: 0,
+			Msg:  "",
+			Ts:   time.Now().Unix(),
+		},
+		Data: optional.NewNil[T]()}
+}
+
 func NewResult[T any](c int, msg string, data T) *Result[T] {
 	return &Result[T]{
 		MsgResult: MsgResult{
@@ -76,15 +86,19 @@ func NewResultOK[T any](data T) *Result[T] {
 // }
 
 type PageResult[T any] struct {
-	*Result[[]T]
-	*Pagination
+	Result[[]T]
+	Pagination
+}
+
+func NewEmptyPageResult[T any]() *PageResult[T] {
+	return &PageResult[T]{Result: *NewEmptyResult[[]T](), Pagination: Pagination{}}
 }
 
 func NewPageResult[T any](c int, msg string, datas []T) *PageResult[T] {
-	return &PageResult[T]{Result: NewResult[[]T](c, msg, datas), Pagination: &Pagination{}}
+	return &PageResult[T]{Result: *NewResult[[]T](c, msg, datas), Pagination: Pagination{}}
 }
 
-func WarpPagination[T any](res *Result[[]T]) *PageResult[T] {
+func WarpPagination[T any](res Result[[]T]) *PageResult[T] {
 	return &PageResult[T]{
 		Result: res,
 	}
