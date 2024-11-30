@@ -20,6 +20,10 @@ func (n *Node[T]) Iter() func(func(*Node[T]) bool) {
 	return NewNodeIter(n)
 }
 
+func (n *Node[T]) ToBiNode() *BiNode[T] {
+	return MapBiNode(n)
+}
+
 func NewNode[T any](data T) *Node[T] {
 	return &Node[T]{
 		Data: data,
@@ -52,6 +56,10 @@ func (n *BiNode[T]) Iter() func(func(*BiNode[T]) bool) {
 	return NewBiNodeIter(n)
 }
 
+func (n *BiNode[T]) ToNode() *Node[T] {
+	return MapNode(n)
+}
+
 func fromNode[T any](n *Node[T]) *BiNode[T] {
 	parent := &BiNode[T]{
 		IsRoot: false,
@@ -70,7 +78,11 @@ func fromNode[T any](n *Node[T]) *BiNode[T] {
 	return parent
 }
 
-func FromRootNode[T any](n *Node[T]) *BiNode[T] {
+func MapBiNode[T any](n *Node[T]) *BiNode[T] {
+	if n == nil {
+		return nil
+	}
+
 	root := &BiNode[T]{
 		IsRoot: true,
 		Data:   n.Data,
@@ -83,6 +95,43 @@ func FromRootNode[T any](n *Node[T]) *BiNode[T] {
 			biChild := fromNode(child)
 			biChild.Parent = root
 			root.Children = append(root.Children, biChild)
+		}
+	}
+
+	return root
+}
+
+func fromBiNode[T any](n *BiNode[T]) *Node[T] {
+	parent := &Node[T]{
+		Data: n.Data,
+	}
+	if n.Children != nil {
+		parent.Children = []*Node[T]{}
+
+		for _, biChild := range n.Children {
+			child := fromBiNode(biChild)
+			parent.Children = append(parent.Children, child)
+		}
+	}
+
+	return parent
+}
+
+func MapNode[T any](n *BiNode[T]) *Node[T] {
+	if n == nil {
+		return nil
+	}
+
+	root := &Node[T]{
+		Data: n.Data,
+	}
+
+	if n.Children != nil {
+		root.Children = []*Node[T]{}
+
+		for _, biChild := range n.Children {
+			child := fromBiNode(biChild)
+			root.Children = append(root.Children, child)
 		}
 	}
 
