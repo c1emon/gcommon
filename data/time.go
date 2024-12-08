@@ -1,7 +1,7 @@
 package data
 
 import (
-	"fmt"
+	"bytes"
 	"strings"
 	"time"
 )
@@ -33,5 +33,5 @@ func (t *Time) UnmarshalJSON(data []byte) error {
 }
 
 func (t Time) MarshalJSON() ([]byte, error) {
-	return ([]byte)(fmt.Sprintf("\"%s\"", t.Time.Format(timeFormat))), nil
+	return bytes.NewBufferString(warpDoubleQuotes(t.Time.Format(timeFormat))).Bytes(), nil
 }
