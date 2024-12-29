@@ -12,7 +12,7 @@ type baseParams struct {
 }
 
 type baseBuilder struct {
-	param *baseParams
+	param baseParams
 }
 
 func (b *baseBuilder) SetName(name string) {
@@ -21,11 +21,11 @@ func (b *baseBuilder) SetName(name string) {
 
 func NewBaseBuilder() baseBuilder {
 	return baseBuilder{
-		param: &baseParams{},
+		param: baseParams{},
 	}
 }
 
-func (b *baseBuilder) Build() (*baseParams, error) {
+func (b *baseBuilder) Build() (baseParams, error) {
 	return b.param, nil
 }
 
@@ -36,32 +36,34 @@ type FullParams struct {
 
 type fullBuilde struct {
 	baseBuilder
-	param *FullParams
+	param FullParams
 }
 
 func (b *fullBuilde) SetVer(ver string) {
 	b.param.Ver = ver
 }
 
-func (b *fullBuilde) Build() (*FullParams, error) {
+func (b *fullBuilde) Build() (FullParams, error) {
+	var zero FullParams
 	baseParams, err := b.baseBuilder.Build()
 	if err != nil {
-		return nil, err
+		return zero, err
 	}
-	b.param.baseParams = baseParams
+	b.param.baseParams = &baseParams
 	return b.param, nil
 }
 
 func NewFullBuilder() *fullBuilde {
 	return &fullBuilde{
 		baseBuilder: NewBaseBuilder(),
-		param:       &FullParams{},
+		param:       FullParams{},
 	}
 }
 
 func TheApi(builder util.Builder[FullParams]) string {
 	param, _ := builder.Build()
 	v, _ := json.MarshalIndent(param, "", "  ")
+	param.Name = "2.0"
 	return string(v)
 }
 
@@ -70,6 +72,8 @@ func Test_builder(t *testing.T) {
 
 	builder.SetName("clemon")
 	builder.SetVer("1.0")
+
+	t.Log(TheApi(builder))
 
 	t.Log(TheApi(builder))
 
