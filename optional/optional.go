@@ -13,12 +13,12 @@ type Optional[T any] struct {
 	value *T
 }
 
-// New creates an optional.String from a T.
+// New returns an Optional holding a copy of v.
 func New[T any](v T) Optional[T] {
 	return Optional[T]{&v}
 }
 
-// NewNil creates an nil optional.String from a T.
+// NewNil returns an Optional with no value (absent).
 func NewNil[T any]() Optional[T] {
 	return Optional[T]{}
 }
@@ -34,6 +34,11 @@ func NewFromPtr[T any](v *T) Optional[T] {
 // Set sets the T value.
 func (s *Optional[T]) Set(v T) {
 	s.value = &v
+}
+
+// Clear removes the value; the optional becomes absent.
+func (s *Optional[T]) Clear() {
+	s.value = nil
 }
 
 // ToPtr returns a *T of the value or nil if not present.
@@ -57,7 +62,7 @@ func (s Optional[T]) Get() (T, error) {
 // MustGet returns the T value or panics if not present.
 func (s Optional[T]) MustGet() T {
 	if !s.Present() {
-		panic("value not present")
+		panic("optional: value not present")
 	}
 	return *s.value
 }
@@ -90,18 +95,19 @@ func (s Optional[T]) MarshalJSON() ([]byte, error) {
 }
 
 func (s *Optional[T]) UnmarshalJSON(data []byte) error {
-
-	if string(data) == "null" {
+	var probe any
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	if probe == nil {
 		s.value = nil
 		return nil
 	}
 
 	var value T
-
 	if err := json.Unmarshal(data, &value); err != nil {
 		return err
 	}
-
 	s.value = &value
 	return nil
 }
