@@ -5,6 +5,9 @@ import (
 	"errors"
 )
 
+// ErrNotPresent is returned by Optional.Get when no value is set.
+var ErrNotPresent = errors.New("optional: value not present")
+
 // Optional is an optional T.
 type Optional[T any] struct {
 	value *T
@@ -42,11 +45,11 @@ func (s Optional[T]) ToPtr() *T {
 	return &v
 }
 
-// Get returns the T value or an error if not present.
+// Get returns the T value or [ErrNotPresent] if not present.
 func (s Optional[T]) Get() (T, error) {
 	if !s.Present() {
 		var zero T
-		return zero, errors.New("value not present")
+		return zero, ErrNotPresent
 	}
 	return *s.value, nil
 }

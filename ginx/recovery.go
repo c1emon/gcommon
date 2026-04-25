@@ -1,6 +1,7 @@
 package ginx
 
 import (
+	"errors"
 	"log/slog"
 	"net"
 	"os"
@@ -8,7 +9,6 @@ import (
 
 	"github.com/c1emon/gcommon/errorx"
 	"github.com/gin-gonic/gin"
-	"github.com/pkg/errors"
 )
 
 func Recovery(logger *slog.Logger) gin.HandlerFunc {
