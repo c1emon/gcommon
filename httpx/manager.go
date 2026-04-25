@@ -41,6 +41,26 @@ func NewManager(opts ...ManagerOption) *Manager {
 	return m
 }
 
+var (
+	defaultManagerMu sync.RWMutex
+	defaultManager   *Manager
+)
+
+// InitDefaultManager replaces the package default [Manager], built with [NewManager](opts...).
+func InitDefaultManager(opts ...ManagerOption) {
+	m := NewManager(opts...)
+	defaultManagerMu.Lock()
+	defaultManager = m
+	defaultManagerMu.Unlock()
+}
+
+// GetDefaultManager returns the [Manager] set by [InitDefaultManager], or nil if [InitDefaultManager] has never been called.
+func GetDefaultManager() *Manager {
+	defaultManagerMu.RLock()
+	defer defaultManagerMu.RUnlock()
+	return defaultManager
+}
+
 // Register creates or replaces a named client. Options are applied after manager defaults.
 func (m *Manager) Register(name string, opts ...ClientOption) *Client {
 	o := newClientRegisterOpts()

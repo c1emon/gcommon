@@ -3,7 +3,8 @@
 // JSON envelope error handling via interceptors.Error. Shared response/result and
 // pagination value objects are provided by package github.com/c1emon/gcommon/vo.
 // It also supports optional retry and rate limiting (golang.org/x/time/rate), and
-// browser impersonation profiles.
+// browser impersonation profiles. Use [InitDefaultManager] and [GetDefaultManager] for
+// a package-level default [Manager] when a single shared instance is enough.
 //
 // Rate limiting is registered as the first OnBeforeRequest hook so it always runs
 // before user-defined request middleware. Response hooks run in registration order

@@ -52,11 +52,34 @@ func main() {
 }
 ```
 
+## 包级默认 Manager
+
+若整个进程只需要一个共享 `Manager`（例如 main 里初始化一次，其它包通过 getter 取），可先调用 `InitDefaultManager`，再用 `GetDefaultManager`：
+
+```go
+httpx.InitDefaultManager(
+	httpx.WithGlobalHeader("X-App", "demo"),
+)
+
+m := httpx.GetDefaultManager()
+if m == nil {
+	panic("call InitDefaultManager before GetDefaultManager")
+}
+c := m.Register("api", httpx.WithBaseURL("https://api.example.com"))
+_ = c
+```
+
+说明：
+
+- `InitDefaultManager` 可多次调用，每次都会**替换**为新的 `Manager` 实例。
+- 未调用 `InitDefaultManager` 时，`GetDefaultManager()` 返回 **`nil`**，调用方需自行判空或保证初始化顺序。
+
 ## 核心概念
 
 - `Manager`
   - 维护 `map[string]*Client`
   - 管理全局默认配置（重试、限流、浏览器、拦截器、header、logger）
+  - 可选：通过 `InitDefaultManager` / `GetDefaultManager` 使用包级默认实例（适合进程内只需一个共享 `Manager` 的场景）
 - `Client`
   - 对 `*req.Client` 的轻量包装
   - 通过 `Req()` 发起请求
@@ -69,6 +92,8 @@ func main() {
 ### Manager
 
 - `NewManager(opts ...ManagerOption) *Manager`
+- `InitDefaultManager(opts ...ManagerOption)`：用 `NewManager(opts...)` 构建并**替换**包级默认 `Manager`
+- `GetDefaultManager() *Manager`：返回当前包级默认 `Manager`；若从未调用过 `InitDefaultManager`，返回 **`nil`**
 - `(*Manager).Register(name string, opts ...ClientOption) *Client`
 - `(*Manager).Client(name string) (*Client, bool)`
 - `(*Manager).MustClient(name string) *Client`

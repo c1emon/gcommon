@@ -26,3 +26,29 @@ func TestManager_globalHeaderAndOverride(t *testing.T) {
 		t.Fatalf("want client header to override global, got %q", b)
 	}
 }
+
+func TestDefaultManager_initAndGet(t *testing.T) {
+	defaultManagerMu.Lock()
+	prev := defaultManager
+	defaultManagerMu.Unlock()
+	t.Cleanup(func() {
+		defaultManagerMu.Lock()
+		defaultManager = prev
+		defaultManagerMu.Unlock()
+	})
+
+	InitDefaultManager(WithGlobalHeader("X-Default-Test", "1"))
+	got := GetDefaultManager()
+	if got == nil {
+		t.Fatal("GetDefaultManager returned nil after InitDefaultManager")
+	}
+	got.Register("smoke", WithBaseURL("https://example.com"))
+	if _, ok := got.Client("smoke"); !ok {
+		t.Fatal("expected registered client on default manager")
+	}
+
+	InitDefaultManager()
+	if got2 := GetDefaultManager(); got2 == got {
+		t.Fatal("expected InitDefaultManager to replace default manager instance")
+	}
+}
