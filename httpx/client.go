@@ -29,7 +29,8 @@ func (c *Client) Req() *Request {
 	return &Request{c.R()}
 }
 
-func NewClient(opts ...*util.FuncOption[Client]) *Client {
+// NewClient builds a client with optional configuration applied in order.
+func NewClient(opts ...util.Option[Client]) *Client {
 	client := &Client{
 		req.NewClient(),
 	}

@@ -79,7 +79,15 @@ func (p *Pagination) GetPageNum() int {
 }
 
 func (p *Pagination) GetOffset() int {
-	return (p.Page - 1) * p.Size
+	page := p.Page
+	if page < 1 {
+		page = 1
+	}
+	size := p.Size
+	if size < 1 {
+		size = 1
+	}
+	return (page - 1) * size
 }
 
 func (p *Pagination) SetTotalPage(total int64) {
@@ -116,7 +124,8 @@ func PaginationFromQuery(req *http.Request) *Pagination {
 	// 	}
 	// }
 	if s := queries.Get("sort"); s != "" {
-		reg := regexp.MustCompile(`(?i)(desc|asc)\\(([a-zA-Z]+[0-9a-zA-Z_]*)\\)`)
+		// e.g. desc(name) asc(id)
+		reg := regexp.MustCompile(`(?i)(desc|asc)\(([a-zA-Z_][0-9a-zA-Z_]*)\)`)
 		for _, k := range reg.FindAllStringSubmatch(s, -1) {
 			paginationQuery.Sorts = append(paginationQuery.Sorts, SortItem{Field: k[2], Order: ParserOrder(k[1])})
 		}
