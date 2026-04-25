@@ -2,7 +2,6 @@ package test
 
 import (
 	"context"
-	"log/slog"
 	"net/http"
 	"os"
 	"testing"
@@ -21,8 +20,9 @@ func Test_http_svc(t *testing.T) {
 		t.Skip("set INTEGRATION=1 to run this blocking smoke test")
 	}
 
-	handler := logx.NewConsoleSlogHandler()
-	logger := slog.New(handler)
+	logger := logx.NewLogger(logx.Config{
+		Format: logx.FormatText,
+	})
 
 	repo := service.NewServiceRepo()
 
