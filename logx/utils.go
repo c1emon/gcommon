@@ -6,8 +6,8 @@ import (
 	"strings"
 )
 
-// ParseLevel converts a level string into slog.Level.
-func ParseLevel(lvStr string) (slog.Level, error) {
+// ParseLogLevel converts a level string into slog.Level.
+func ParseLogLevel(lvStr string) (slog.Level, error) {
 	switch strings.ToUpper(strings.TrimSpace(lvStr)) {
 	case "DEBUG":
 		return slog.LevelDebug, nil
@@ -19,5 +19,16 @@ func ParseLevel(lvStr string) (slog.Level, error) {
 		return slog.LevelError, nil
 	default:
 		return slog.LevelInfo, fmt.Errorf("invalid slog level: %s", lvStr)
+	}
+}
+
+func ParseLogFormat(format string) string {
+	switch strings.ToLower(format) {
+	case "text":
+		return FormatText
+	case "json":
+		return FormatJSON
+	default:
+		return FormatJSON
 	}
 }

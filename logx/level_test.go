@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestParseLevel(t *testing.T) {
+func TestParseLogLevel(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
@@ -28,7 +28,7 @@ func TestParseLevel(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := ParseLevel(tc.input)
+			got, err := ParseLogLevel(tc.input)
 			if tc.wantErr && err == nil {
 				t.Fatalf("expected error for input %q", tc.input)
 			}

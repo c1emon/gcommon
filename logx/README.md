@@ -51,7 +51,7 @@ func main() {
 ## Level Parsing
 
 ```go
-lv, err := logx.ParseLevel("info")
+lv, err := logx.ParseLogLevel("info")
 if err != nil {
 	// handle invalid level input
 }
