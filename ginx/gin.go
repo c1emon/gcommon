@@ -5,17 +5,17 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func New(opts ...*util.FuncOption[gin.Engine]) *gin.Engine {
-
+// New builds a gin engine with optional configuration applied in order.
+func New(opts ...util.Option[gin.Engine]) *gin.Engine {
 	eng := gin.New()
 	for _, opt := range opts {
 		opt.Apply(eng)
 	}
-
 	return eng
 }
 
-func WithMiddleware(h gin.HandlerFunc) *util.FuncOption[gin.Engine] {
+// WithMiddleware registers a handler in the engine's global middleware chain.
+func WithMiddleware(h gin.HandlerFunc) util.Option[gin.Engine] {
 	return util.WrapFuncOption(func(eng *gin.Engine) {
 		eng.Use(h)
 	})
