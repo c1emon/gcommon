@@ -166,7 +166,7 @@ func (c *RegisterClient) Deregister(ids ...string) error {
 		}
 	}
 	for _, id := range ids {
-		c.logger.Info("de-register service %s", id)
+		c.logger.Info("de-register service", "id", id)
 		err := c.client.DeregisterSvc(id)
 		if err != nil {
 			return err

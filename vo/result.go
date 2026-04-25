@@ -1,4 +1,4 @@
-package httpx
+package vo
 
 import (
 	"time"
@@ -98,7 +98,8 @@ func NewPageResult[T any](c int, msg string, datas []T) *PageResult[T] {
 	return &PageResult[T]{Result: *NewResult[[]T](c, msg, datas), Pagination: Pagination{}}
 }
 
-func WarpPagination[T any](res Result[[]T]) *PageResult[T] {
+// WrapPagination embeds a list [Result] as a [PageResult] (pagination fields stay zero).
+func WrapPagination[T any](res Result[[]T]) *PageResult[T] {
 	return &PageResult[T]{
 		Result: res,
 	}

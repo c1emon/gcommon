@@ -14,9 +14,7 @@ import (
 	"github.com/c1emon/gcommon/service"
 	"golang.org/x/sync/errgroup"
 )
-
-// from https://github.com/grafana/grafana/blob/4cc72a22ad03132295ab3428ed9877ba2cb42eb2/pkg/server/server.go
-func New(repo *service.ServiceRepo, logger *slog.Logger, servserverOptions ...serverOption) (*Server, error) {
+func New(repo *service.ServiceRepo, logger *slog.Logger, serverOptions ...serverOption) (*Server, error) {
 	s, err := newServer(repo, logger)
 	if err != nil {
 		return nil, err
@@ -26,7 +24,7 @@ func New(repo *service.ServiceRepo, logger *slog.Logger, servserverOptions ...se
 		return nil, err
 	}
 
-	fromOptions(s, servserverOptions...)
+	fromOptions(s, serverOptions...)
 	return s, nil
 }
 
@@ -133,7 +131,9 @@ func (s *Server) Run() error {
 		return err
 	}
 
-	s.preRun(s.context)
+	if err := s.preRun(s.context); err != nil {
+		return err
+	}
 
 	// Start background services.
 	for _, svc := range s.svcRepo.Services() {
@@ -150,12 +150,12 @@ func (s *Server) Run() error {
 			// start service
 			s.logger.Debug("starting background service", "name", service.Name())
 			// block!
-			err := service.Run(s.context, s.shutdownTimeout-time.Second)
+			err := service.Run(s.context, s.serviceStopTimeout())
 			// Do not return context.Canceled error since errgroup.Group only
 			// returns the first error to the caller - thus we can miss a more
 			// interesting error.
 			if err != nil && !errors.Is(err, context.Canceled) {
-				s.logger.Error("stopp background service failed", "name", service.Name(), "error", err)
+				s.logger.Error("stop background service failed", "name", service.Name(), "error", err)
 				return fmt.Errorf("%s stop error: %w", service.Name(), err)
 			}
 			s.logger.Debug("stopped background service", "name", service.Name())
@@ -164,19 +164,42 @@ func (s *Server) Run() error {
 
 	}
 
-	s.postRun(s.context)
+	if err := s.postRun(s.context); err != nil {
+		return err
+	}
 	return s.childRoutines.Wait()
 }
 
-// Shutdown initiates Grafana graceful shutdown. This shuts down all
-// running background services. Since Run blocks Shutdown supposed to
-// be run from a separate goroutine.
+// serviceStopTimeout is the deadline passed to each service's Stop; kept
+// slightly below shutdownTimeout so Run can finish and close shutdownFinished
+// before the outer Shutdown context times out.
+func (s *Server) serviceStopTimeout() time.Duration {
+	const margin = time.Second
+	if s.shutdownTimeout <= margin {
+		t := s.shutdownTimeout * 4 / 5
+		if t <= 0 {
+			return s.shutdownTimeout
+		}
+		return t
+	}
+	return s.shutdownTimeout - margin
+}
+
+// Shutdown begins graceful shutdown: preStop hooks, cancel root context,
+// wait for Run to finish background services, then postStop hooks.
+// Safe to call from any goroutine once per process shutdown; pairs internally
+// with Run's shutdownWG so Run does not exit until Shutdown completes.
 func (s *Server) Shutdown(ctx context.Context, reason string) error {
+	s.shutdownWG.Add(1)
 	defer s.shutdownWG.Done()
+
 	var err error
 	s.shutdownOnce.Do(func() {
 		s.logger.Info("shutdown started", "reason", reason)
-		s.preStop(s.context)
+		if e := s.preStop(s.context); e != nil {
+			s.logger.Error("server preStop failed", "error", e)
+			err = errors.Join(err, e)
+		}
 		// Call cancel func to stop background services.
 		s.shutdownFn()
 		// Wait for server to shut down
@@ -185,9 +208,14 @@ func (s *Server) Shutdown(ctx context.Context, reason string) error {
 			s.logger.Info("server shutdown success")
 		case <-ctx.Done():
 			s.logger.Error("timed out while waiting for server to shutdown")
-			err = fmt.Errorf("timeout waiting for shutdown")
+			err = errors.Join(err, fmt.Errorf("timeout waiting for shutdown"))
 		}
-		s.postStop(s.context)
+		postCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), s.shutdownTimeout)
+		defer cancel()
+		if e := s.postStop(postCtx); e != nil {
+			s.logger.Error("server postStop failed", "error", e)
+			err = errors.Join(err, e)
+		}
 	})
 
 	return err
@@ -207,13 +235,16 @@ func (s *Server) ListenToSystemSignals(ctx context.Context) {
 			// 	fmt.Fprintf(os.Stderr, "Failed to reload loggers: %s\n", err)
 			// }
 		case sig := <-signalChan:
-			ctx, cancel := context.WithTimeout(ctx, s.shutdownTimeout)
-			defer cancel()
-			s.shutdownWG.Add(1)
-			if err := s.Shutdown(ctx, fmt.Sprintf("system signal -> %s", sig)); err != nil {
-				s.logger.Error("timed out waiting for server to shutdown")
-			}
+			s.handleShutdownSignal(ctx, sig)
 			return
 		}
+	}
+}
+
+func (s *Server) handleShutdownSignal(parent context.Context, sig os.Signal) {
+	shutdownCtx, cancel := context.WithTimeout(parent, s.shutdownTimeout)
+	defer cancel()
+	if err := s.Shutdown(shutdownCtx, fmt.Sprintf("system signal -> %s", sig)); err != nil {
+		s.logger.Error("server shutdown finished with errors", "error", err)
 	}
 }

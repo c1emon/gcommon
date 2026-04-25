@@ -1,8 +1,6 @@
 package errorx
 
-import (
-	"github.com/pkg/errors"
-)
+import "errors"
 
 var (
 	ErrInternal            = NewCommonError(1000, "internal error")
@@ -12,7 +10,7 @@ var (
 	ErrResourceUnavailable = NewCommonError(1004, "resource unavailable")
 	ErrResourceNotFound    = NewCommonError(1005, "resource not found")
 
-	ErrIO = NewCommonError(1005, "resource not found")
+	ErrIO = NewCommonError(1006, "i/o error")
 )
 
 // type ErrorX interface {
@@ -41,9 +39,19 @@ func (e CommonError) Unwrap() error {
 	return e.error
 }
 
-func (e CommonError) Is(err error) bool {
-	if x, ok := errors.Cause(err).(CommonError); ok {
-		return e.Code() == x.Code()
+// Is implements error matching for errors.Is: same business code as another *CommonError
+// or *HttpError (errors.As does not treat *HttpError as *CommonError).
+func (e *CommonError) Is(target error) bool {
+	if e == nil || target == nil {
+		return false
+	}
+	var h *HttpError
+	if errors.As(target, &h) && h != nil && h.CommonError != nil {
+		return e.Code() == h.Code()
+	}
+	var o *CommonError
+	if errors.As(target, &o) && o != nil {
+		return e.Code() == o.Code()
 	}
 	return false
 }

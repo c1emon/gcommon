@@ -2,9 +2,7 @@ package service
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"reflect"
 	"sync"
 	"time"
 )
@@ -20,59 +18,50 @@ type ServiceRunner interface {
 	Name() string
 }
 
-var _ ServiceRunner = &defaultRunableService{}
+var _ ServiceRunner = &defaultRunnableService{}
 
-func WrapDefault(svc Service) *defaultRunableService {
-	return &defaultRunableService{
+func WrapDefault(svc Service) *defaultRunnableService {
+	return &defaultRunnableService{
 		svc: svc,
 		wg:  sync.WaitGroup{},
 	}
 }
 
-type defaultRunableService struct {
+type defaultRunnableService struct {
 	svc Service
 	wg  sync.WaitGroup
 }
 
-func (s *defaultRunableService) Name() string {
+func (s *defaultRunnableService) Name() string {
 	if s.svc.Name() == "" {
-		return reflect.TypeOf(s.svc).String()
+		return fmt.Sprintf("%T", s.svc)
 	}
 	return s.svc.Name()
 }
 
-func (s *defaultRunableService) Run(ctx context.Context, timeout time.Duration) error {
+func (s *defaultRunnableService) Run(ctx context.Context, timeout time.Duration) error {
 	s.wg.Add(1)
-	var err error
+	stopErr := make(chan error, 1)
 
-	// start service here
-	// non-block
-	if err = s.svc.Start(); err != nil {
+	if err := s.svc.Start(); err != nil {
 		s.wg.Done()
-		return fmt.Errorf("service start error: %s", err)
+		return fmt.Errorf("service start error: %w", err)
 	}
 
-	// handle http shutdown on server context done
 	go func() {
 		defer s.wg.Done()
 		<-ctx.Done()
 
-		// shutdown server here
 		timeoutCtx, cancelFn := context.WithTimeout(context.Background(), timeout)
 		defer cancelFn()
 
-		if err = s.svc.Stop(timeoutCtx); err != nil {
-			err = fmt.Errorf("service stop error: %s", err)
+		if err := s.svc.Stop(timeoutCtx); err != nil {
+			stopErr <- fmt.Errorf("service stop error: %w", err)
 			return
 		}
-
-		// <-timeoutCtx.Done()
-		if errors.Is(timeoutCtx.Err(), context.DeadlineExceeded) {
-			err = fmt.Errorf("service stop timeout: %s", err)
-		}
+		stopErr <- nil
 	}()
 
-	// block here
 	s.wg.Wait()
-	return err
+	return <-stopErr
 }

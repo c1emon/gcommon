@@ -1,36 +1,51 @@
 package ginx
 
 import (
-	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
 
+// Logger emits one structured log line per request after the handler returns.
 func Logger(logger *slog.Logger) gin.HandlerFunc {
-
 	return func(c *gin.Context) {
-
-		// Start timer
-		//start := time.Now()
+		start := time.Now()
 		method := c.Request.Method
-		uri := c.Request.RequestURI
+		path := c.Request.URL.Path
+		if path == "" {
+			path = c.Request.RequestURI
+		}
 
-		// Process request
 		c.Next()
-		//latency := time.Now().Sub(start)
+
 		status := c.Writer.Status()
+		latency := time.Since(start)
+		attrs := []any{
+			slog.String("method", method),
+			slog.Int("status", status),
+			slog.String("path", path),
+			slog.Duration("latency", latency),
+		}
 
 		switch {
 		case status >= 100 && status < 400:
-			logger.Info(fmt.Sprintf("[%s %d] %s", method, status, uri))
-		case status >= 400 && status < 500 && len(c.Errors) > 0:
-			logger.Warn(fmt.Sprintf("[%s %d] %s: %s", method, status, uri, c.Errors[0].Error()))
-		case status >= 500 && status < 600 && len(c.Errors) > 0:
-			logger.Error(fmt.Sprintf("[%s %d] %s: %s", method, status, uri, c.Errors[0].Error()))
+			logger.Info("http request", attrs...)
+		case status >= 400 && status < 500:
+			if len(c.Errors) > 0 {
+				attrs = append(attrs, slog.String("err", c.Errors.Last().Error()))
+			}
+			logger.Warn("http request", attrs...)
+		case status >= 500 && status < 600:
+			if len(c.Errors) > 0 {
+				attrs = append(attrs, slog.String("err", c.Errors.Last().Error()))
+			}
+			logger.Error("http request", attrs...)
 		default:
-			logger.Error(fmt.Sprintf("[%s %d] %s: %s\n%+v", method, status, uri, "unknown status", c.Errors))
+			if len(c.Errors) > 0 {
+				attrs = append(attrs, slog.String("err", c.Errors.Last().Error()))
+			}
+			logger.Error("http request", append(attrs, slog.String("note", "unusual status"))...)
 		}
-
 	}
 }

@@ -1,8 +1,9 @@
-package httpx
+package ginx
 
 import (
 	"context"
 	"errors"
+	"net"
 	"net/http"
 
 	"github.com/c1emon/gcommon/service"
@@ -19,15 +20,19 @@ func (HttpService) Name() string {
 }
 
 func (s *HttpService) Start() error {
-	var err error
-	go func() {
-		err = s.srv.ListenAndServe()
-	}()
-	if errors.Is(err, http.ErrServerClosed) {
-		return nil
+	ln, err := net.Listen("tcp", s.srv.Addr)
+	if err != nil {
+		return err
 	}
-	return err
+	go func() {
+		if err := s.srv.Serve(ln); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			// Serve errors after Start returned cannot be surfaced via Start(); callers may log via metrics.
+			_ = err
+		}
+	}()
+	return nil
 }
+
 func (s *HttpService) Stop(timeOutCtx context.Context) error {
 	return s.srv.Shutdown(timeOutCtx)
 }

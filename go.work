@@ -1,0 +1,12 @@
+go 1.25.0
+
+use (
+	.
+	./cachex
+	./cloud
+	./ginx
+	./gormx
+	./httpx
+	./logx
+	./test
+)
