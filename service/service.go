@@ -2,9 +2,7 @@ package service
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"reflect"
 	"sync"
 	"time"
 )
@@ -36,7 +34,7 @@ type defaultRunnableService struct {
 
 func (s *defaultRunnableService) Name() string {
 	if s.svc.Name() == "" {
-		return reflect.TypeOf(s.svc).String()
+		return fmt.Sprintf("%T", s.svc)
 	}
 	return s.svc.Name()
 }
@@ -59,10 +57,6 @@ func (s *defaultRunnableService) Run(ctx context.Context, timeout time.Duration)
 
 		if err := s.svc.Stop(timeoutCtx); err != nil {
 			stopErr <- fmt.Errorf("service stop error: %w", err)
-			return
-		}
-		if errors.Is(timeoutCtx.Err(), context.DeadlineExceeded) {
-			stopErr <- fmt.Errorf("service stop: context deadline exceeded")
 			return
 		}
 		stopErr <- nil
