@@ -12,7 +12,7 @@ var (
 	ErrResourceUnavailable = NewCommonError(1004, "resource unavailable")
 	ErrResourceNotFound    = NewCommonError(1005, "resource not found")
 
-	ErrIO = NewCommonError(1005, "resource not found")
+	ErrIO = NewCommonError(1006, "i/o error")
 )
 
 // type ErrorX interface {

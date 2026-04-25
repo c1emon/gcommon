@@ -16,7 +16,7 @@ import (
 )
 
 // from https://github.com/grafana/grafana/blob/4cc72a22ad03132295ab3428ed9877ba2cb42eb2/pkg/server/server.go
-func New(repo *service.ServiceRepo, logger *slog.Logger, servserverOptions ...serverOption) (*Server, error) {
+func New(repo *service.ServiceRepo, logger *slog.Logger, serverOptions ...serverOption) (*Server, error) {
 	s, err := newServer(repo, logger)
 	if err != nil {
 		return nil, err
@@ -26,7 +26,7 @@ func New(repo *service.ServiceRepo, logger *slog.Logger, servserverOptions ...se
 		return nil, err
 	}
 
-	fromOptions(s, servserverOptions...)
+	fromOptions(s, serverOptions...)
 	return s, nil
 }
 
@@ -133,7 +133,9 @@ func (s *Server) Run() error {
 		return err
 	}
 
-	s.preRun(s.context)
+	if err := s.preRun(s.context); err != nil {
+		return err
+	}
 
 	// Start background services.
 	for _, svc := range s.svcRepo.Services() {
@@ -164,7 +166,9 @@ func (s *Server) Run() error {
 
 	}
 
-	s.postRun(s.context)
+	if err := s.postRun(s.context); err != nil {
+		return err
+	}
 	return s.childRoutines.Wait()
 }
 

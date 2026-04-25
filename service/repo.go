@@ -10,7 +10,7 @@ type ServiceRepo struct {
 	services []Service
 }
 
-func (r *ServiceRepo) Registe(service Service) {
+func (r *ServiceRepo) Register(service Service) {
 	r.services = append(r.services, service)
 }
 

@@ -2,6 +2,7 @@ package cloud
 
 import (
 	"fmt"
+	"slices"
 	"sort"
 )
 
@@ -51,12 +52,12 @@ func (i *RemoteService) Equal(o any) bool {
 	// 	}
 	// }
 
-	sort.Strings(i.Tags)
-	sort.Strings(t.Tags)
-	for j := 0; j < len(i.Tags); j++ {
-		if i.Tags[j] != t.Tags[j] {
-			return false
-		}
+	tagsI := append([]string(nil), i.Tags...)
+	tagsT := append([]string(nil), t.Tags...)
+	sort.Strings(tagsI)
+	sort.Strings(tagsT)
+	if !slices.Equal(tagsI, tagsT) {
+		return false
 	}
 
 	if len(i.Metadata) != len(t.Metadata) {

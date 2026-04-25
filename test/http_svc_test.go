@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
+	"os"
 	"testing"
 
 	"github.com/c1emon/gcommon/ginx"
@@ -14,7 +15,12 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// Test_http_svc is a manual smoke test: it blocks on server.Run until a signal.
+// Run with: INTEGRATION=1 go test -v ./test -run Test_http_svc
 func Test_http_svc(t *testing.T) {
+	if os.Getenv("INTEGRATION") != "1" {
+		t.Skip("set INTEGRATION=1 to run this blocking smoke test")
+	}
 
 	handler := logx.NewConsoleSlogHandler()
 	logger := slog.New(handler)
@@ -30,7 +36,7 @@ func Test_http_svc(t *testing.T) {
 		c.String(http.StatusOK, "Welcome Gin Server")
 	})
 
-	repo.Registe(httpx.NewHttpService(":8080", r))
+	repo.Register(httpx.NewHttpService(":8080", r))
 
 	srv, err := server.New(repo, logger)
 	if err != nil {
