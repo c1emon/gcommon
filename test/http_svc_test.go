@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/c1emon/gcommon/ginx"
-	"github.com/c1emon/gcommon/httpx"
 	"github.com/c1emon/gcommon/logx"
 	"github.com/c1emon/gcommon/server"
 	"github.com/c1emon/gcommon/service"
@@ -36,7 +35,7 @@ func Test_http_svc(t *testing.T) {
 		c.String(http.StatusOK, "Welcome Gin Server")
 	})
 
-	repo.Register(httpx.NewHttpService(":8080", r))
+	repo.Register(ginx.NewHttpService(":8080", r))
 
 	srv, err := server.New(repo, logger)
 	if err != nil {

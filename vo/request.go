@@ -1,4 +1,4 @@
-package httpx
+package vo
 
 import (
 	"fmt"

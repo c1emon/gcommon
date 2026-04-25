@@ -1,4 +1,4 @@
-package httpx
+package ginx
 
 import (
 	"context"
@@ -32,6 +32,7 @@ func (s *HttpService) Start() error {
 	}()
 	return nil
 }
+
 func (s *HttpService) Stop(timeOutCtx context.Context) error {
 	return s.srv.Shutdown(timeOutCtx)
 }

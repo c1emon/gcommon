@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/c1emon/gcommon/errorx"
-	"github.com/c1emon/gcommon/httpx"
+	"github.com/c1emon/gcommon/vo"
 	"github.com/gin-gonic/gin"
 )
 
@@ -44,7 +44,7 @@ func Recovery(logger *slog.Logger) gin.HandlerFunc {
 				logger.Error("gin panic", "error", v)
 				_ = c.Error(errorx.ErrInternal)
 				c.AbortWithStatusJSON(http.StatusInternalServerError,
-					httpx.NewMsgResult(errorx.ErrInternal.Code(), errorx.ErrInternal.Error()))
+					vo.NewMsgResult(errorx.ErrInternal.Code(), errorx.ErrInternal.Error()))
 			}
 		}()
 		c.Next()

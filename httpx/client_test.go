@@ -1,30 +1,43 @@
 package httpx_test
 
 import (
-	"fmt"
 	"io"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/c1emon/gcommon/httpx"
 )
 
-func TestClient(t *testing.T) {
-
-	client := httpx.NewClient(httpx.WithBaseUrl("http://baidu.com"), httpx.WithReqInterceptor(func(client *httpx.Client, req *httpx.Request) error {
-		fmt.Printf("url=%s\n", client.BaseURL)
-		return nil
+func TestManagerRegister_clientIsolation(t *testing.T) {
+	a := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte("a"))
 	}))
+	b := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte("b"))
+	}))
+	t.Cleanup(a.Close)
+	t.Cleanup(b.Close)
 
-	resp, err := client.Req().Get("/")
+	m := httpx.NewManager()
+	ca := m.Register("a", httpx.WithBaseURL(a.URL))
+	cb := m.Register("b", httpx.WithBaseURL(b.URL))
+
+	ra, err := ca.R().Get("/")
 	if err != nil {
-		fmt.Printf("err=%s", err)
-		return
+		t.Fatal(err)
+	}
+	bodyA, _ := io.ReadAll(ra.Body)
+	if string(bodyA) != "a" {
+		t.Fatalf("client a: got %q", bodyA)
 	}
 
-	b, err := io.ReadAll(resp.Body)
+	rb, err := cb.R().Get("/")
 	if err != nil {
-		fmt.Printf("err=%s", err)
-		return
+		t.Fatal(err)
 	}
-	fmt.Printf("resp=%s", b)
+	bodyB, _ := io.ReadAll(rb.Body)
+	if string(bodyB) != "b" {
+		t.Fatalf("client b: got %q", bodyB)
+	}
 }

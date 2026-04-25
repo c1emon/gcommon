@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/c1emon/gcommon/errorx"
-	"github.com/c1emon/gcommon/httpx"
+	"github.com/c1emon/gcommon/vo"
 	"github.com/gin-gonic/gin"
 )
 
@@ -21,11 +21,11 @@ func ErrorHandler() gin.HandlerFunc {
 			e := c.Errors[i]
 			var he *errorx.HttpError
 			if errors.As(e.Err, &he) {
-				c.JSON(he.HttpStatus(), httpx.NewMsgResult(he.Code(), e.Error()))
+				c.JSON(he.HttpStatus(), vo.NewMsgResult(he.Code(), e.Error()))
 				return
 			}
 		}
 		last := c.Errors.Last()
-		c.JSON(http.StatusBadRequest, httpx.NewMsgResult(-1, last.Error()))
+		c.JSON(http.StatusBadRequest, vo.NewMsgResult(-1, last.Error()))
 	}
 }

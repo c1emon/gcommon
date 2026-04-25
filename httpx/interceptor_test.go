@@ -15,7 +15,8 @@ func TestErrorInterceptor_bodyStillReadable(t *testing.T) {
 	}))
 	t.Cleanup(srv.Close)
 
-	c := NewClient(WithRespInterceptor(ErrorInterceptor))
+	m := NewManager()
+	c := m.Register("t")
 
 	resp, err := c.R().Get(srv.URL)
 	if err != nil {
@@ -35,10 +36,9 @@ func TestErrorInterceptor_secondHook_seesBody(t *testing.T) {
 	}))
 	t.Cleanup(srv.Close)
 
-	// OnAfterResponse runs in reverse registration order: ErrorInterceptor (registered
-	// last) runs first; the earlier hook runs after and should use Bytes()/ToBytes().
 	var second []byte
-	c := NewClient(
+	m := NewManager()
+	c := m.Register("t",
 		WithRespInterceptor(func(_ *Client, resp *Response) error {
 			b, err := resp.ToBytes()
 			if err != nil {
@@ -47,7 +47,6 @@ func TestErrorInterceptor_secondHook_seesBody(t *testing.T) {
 			second = b
 			return nil
 		}),
-		WithRespInterceptor(ErrorInterceptor),
 	)
 
 	_, err := c.R().Get(srv.URL)
@@ -66,9 +65,40 @@ func TestErrorInterceptor_businessError(t *testing.T) {
 	}))
 	t.Cleanup(srv.Close)
 
-	c := NewClient(WithRespInterceptor(ErrorInterceptor))
+	m := NewManager()
+	c := m.Register("t")
 	_, err := c.R().Get(srv.URL)
 	if err == nil {
 		t.Fatal("want error for non-zero code")
+	}
+}
+
+func TestErrorInterceptor_strictContentType_plainTextSkipped(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/plain")
+		_, _ = w.Write([]byte(`{"code":400,"msg":"bad","ts":1}`))
+	}))
+	t.Cleanup(srv.Close)
+
+	m := NewManager(WithGlobalStrictJSONContentType())
+	c := m.Register("t")
+	_, err := c.R().Get(srv.URL)
+	if err != nil {
+		t.Fatalf("strict mode should skip non-json content-type, got %v", err)
+	}
+}
+
+func TestErrorInterceptor_strictContentType_applicationJSONParsed(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		_, _ = w.Write([]byte(`{"code":400,"msg":"bad","ts":1}`))
+	}))
+	t.Cleanup(srv.Close)
+
+	m := NewManager(WithGlobalStrictJSONContentType())
+	c := m.Register("t")
+	_, err := c.R().Get(srv.URL)
+	if err == nil {
+		t.Fatal("want error for json content-type with non-zero code")
 	}
 }

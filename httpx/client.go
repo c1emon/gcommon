@@ -1,7 +1,6 @@
 package httpx
 
 import (
-	"github.com/c1emon/gcommon/util"
 	"github.com/imroc/req/v3"
 )
 
@@ -13,8 +12,10 @@ type (
 	RespInterceptor func(client *Client, resp *Response) error
 )
 
+// Client wraps a single imroc/req [req.Client], usually created by [Manager.Register].
 type Client struct {
 	*req.Client
+	name string
 }
 
 type Request struct {
@@ -25,18 +26,11 @@ type Response struct {
 	*req.Response
 }
 
-func (c *Client) Req() *Request {
-	return &Request{c.R()}
+// Name is the key passed to [Manager.Register].
+func (c *Client) Name() string {
+	return c.name
 }
 
-// NewClient builds a client with optional configuration applied in order.
-func NewClient(opts ...util.Option[Client]) *Client {
-	client := &Client{
-		req.NewClient(),
-	}
-
-	for _, opt := range opts {
-		opt.Apply(client)
-	}
-	return client
+func (c *Client) Req() *Request {
+	return &Request{c.R()}
 }
