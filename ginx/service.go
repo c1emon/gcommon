@@ -3,45 +3,99 @@ package ginx
 import (
 	"context"
 	"errors"
+	"fmt"
+	"log/slog"
 	"net"
 	"net/http"
 
+	"github.com/c1emon/gcommon/logx"
 	"github.com/c1emon/gcommon/service"
+	"github.com/gin-gonic/gin"
 )
 
-var _ service.Service = &HttpService{}
+var _ service.Service = &HTTPService{}
 
-type HttpService struct {
-	srv *http.Server
+// HTTPService adapts an http.Server to the service.Service lifecycle.
+type HTTPService struct {
+	name    string
+	server  *http.Server
+	logger  *slog.Logger
+	serveCh chan error
 }
 
-func (HttpService) Name() string {
-	return "HttpService"
+// Name returns the service name shown in lifecycle logs.
+func (s *HTTPService) Name() string {
+	return s.name
 }
 
-func (s *HttpService) Start() error {
-	ln, err := net.Listen("tcp", s.srv.Addr)
+// ServeErrors exposes asynchronous Serve errors after Start returns.
+func (s *HTTPService) ServeErrors() <-chan error {
+	return s.serveCh
+}
+
+// Start begins listening and serving in a background goroutine.
+func (s *HTTPService) Start() error {
+	ln, err := net.Listen("tcp", s.server.Addr)
 	if err != nil {
 		return err
 	}
 	go func() {
-		if err := s.srv.Serve(ln); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			// Serve errors after Start returned cannot be surfaced via Start(); callers may log via metrics.
-			_ = err
+		if err := s.server.Serve(ln); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			select {
+			case s.serveCh <- err:
+			default:
+			}
+			s.logger.Error("http service serve failed", slog.String("service", s.name), logx.Err(err))
 		}
 	}()
 	return nil
 }
 
-func (s *HttpService) Stop(timeOutCtx context.Context) error {
-	return s.srv.Shutdown(timeOutCtx)
+// Stop gracefully shuts the underlying http.Server down.
+func (s *HTTPService) Stop(timeOutCtx context.Context) error {
+	return s.server.Shutdown(timeOutCtx)
 }
 
-func NewHttpService(endpoint string, handler http.Handler) *HttpService {
-	return &HttpService{
-		srv: &http.Server{
-			Addr:    endpoint,
-			Handler: handler,
-		},
+// HTTPServiceConfig configures NewHTTPService.
+type HTTPServiceConfig struct {
+	Name   string
+	Server *http.Server
+}
+
+// NewHTTPService builds an HTTPService from a preconfigured *http.Server.
+// If Name is empty it defaults to "http@<addr>".
+func NewHTTPService(cfg HTTPServiceConfig) *HTTPService {
+	server := cfg.Server
+	if server == nil {
+		server = &http.Server{}
 	}
+	logger := logx.Default()
+	name := cfg.Name
+	if name == "" {
+		name = fmt.Sprintf("http@%s", server.Addr)
+	}
+	return &HTTPService{
+		name:    name,
+		server:  server,
+		logger:  logger,
+		serveCh: make(chan error, 1),
+	}
+}
+
+// GinServiceConfig configures NewGinService.
+type GinServiceConfig struct {
+	Name   string
+	Addr   string
+	Engine *gin.Engine
+}
+
+// NewGinService builds an HTTPService from a gin engine and listen address.
+func NewGinService(cfg GinServiceConfig) *HTTPService {
+	return NewHTTPService(HTTPServiceConfig{
+		Name: cfg.Name,
+		Server: &http.Server{
+			Addr:    cfg.Addr,
+			Handler: cfg.Engine,
+		},
+	})
 }

@@ -9,23 +9,94 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// ErrorHandler writes one JSON error response after the handler chain, preferring
-// the most recent [errorx.HttpError] in the gin error list.
-func ErrorHandler() gin.HandlerFunc {
+const requestErrorKey = "_ginx_request_error"
+
+type requestError struct {
+	err    error
+	status int
+	code   int
+	msg    string
+	data   any
+}
+
+func setRequestError(c *gin.Context, reqErr requestError) {
+	c.Set(requestErrorKey, reqErr)
+}
+
+func getRequestError(c *gin.Context) (requestError, bool) {
+	raw, ok := c.Get(requestErrorKey)
+	if !ok {
+		return requestError{}, false
+	}
+	reqErr, ok := raw.(requestError)
+	if !ok {
+		return requestError{}, false
+	}
+	return reqErr, true
+}
+
+func normalizeError(err error) requestError {
+	var he *errorx.HttpError
+	if errors.As(err, &he) {
+		return requestError{
+			err:    err,
+			status: he.HttpStatus(),
+			code:   he.Code(),
+			msg:    he.Error(),
+			data:   he.Data(),
+		}
+	}
+
+	var ce *errorx.CommonError
+	if errors.As(err, &ce) {
+		status := http.StatusBadRequest
+		if errors.Is(err, errorx.ErrInternal) {
+			status = http.StatusInternalServerError
+		}
+		return requestError{
+			err:    err,
+			status: status,
+			code:   ce.Code(),
+			msg:    ce.Error(),
+		}
+	}
+
+	return requestError{
+		err:    err,
+		status: http.StatusBadRequest,
+		code:   -1,
+		msg:    err.Error(),
+	}
+}
+
+// ErrorResponder writes one JSON error response after the handler chain.
+func ErrorResponder() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Next()
+
+		if c.Writer.Written() {
+			return
+		}
+
+		if reqErr, ok := getRequestError(c); ok {
+			if reqErr.data != nil {
+				c.JSON(reqErr.status, vo.NewResult(reqErr.code, reqErr.msg, reqErr.data))
+				return
+			}
+			c.JSON(reqErr.status, vo.NewMsgResult(reqErr.code, reqErr.msg))
+			return
+		}
+
 		if len(c.Errors) == 0 {
 			return
 		}
-		for i := len(c.Errors) - 1; i >= 0; i-- {
-			e := c.Errors[i]
-			var he *errorx.HttpError
-			if errors.As(e.Err, &he) {
-				c.JSON(he.HttpStatus(), vo.NewMsgResult(he.Code(), e.Error()))
-				return
-			}
+		last := c.Errors.Last().Err
+		reqErr := normalizeError(last)
+		setRequestError(c, reqErr)
+		if reqErr.data != nil {
+			c.JSON(reqErr.status, vo.NewResult(reqErr.code, reqErr.msg, reqErr.data))
+			return
 		}
-		last := c.Errors.Last()
-		c.JSON(http.StatusBadRequest, vo.NewMsgResult(-1, last.Error()))
+		c.JSON(reqErr.status, vo.NewMsgResult(reqErr.code, reqErr.msg))
 	}
 }
