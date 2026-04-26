@@ -6,6 +6,7 @@ use (
 	./cloud
 	./ginx
 	./gormx
+	./health
 	./httpx
 	./logx
 	./test

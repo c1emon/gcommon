@@ -4,6 +4,7 @@ go 1.25.0
 
 require (
 	github.com/c1emon/gcommon v0.0.0
+	github.com/c1emon/gcommon/logx v0.0.0
 	github.com/gin-gonic/gin v1.12.0
 )
 
@@ -43,5 +44,5 @@ require (
 
 replace (
 	github.com/c1emon/gcommon => ../
-	github.com/c1emon/gcommon/httpx => ../httpx
+	github.com/c1emon/gcommon/logx => ../logx
 )
