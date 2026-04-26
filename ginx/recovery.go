@@ -3,6 +3,7 @@ package ginx
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"net"
 	"os"
 	"strings"
@@ -21,9 +22,11 @@ func panicAsError(v any) error {
 
 // Recovery catches panics in downstream handlers, logs them, and sends a response.
 // Broken pipe / connection reset is logged at warn without a JSON body.
-// It always writes via logx.Default().
-func Recovery() gin.HandlerFunc {
-	logger := logx.Default()
+// logger must be non-nil.
+func Recovery(logger *slog.Logger) gin.HandlerFunc {
+	if logger == nil {
+		panic("ginx: Recovery called with nil *slog.Logger")
+	}
 	return func(c *gin.Context) {
 		defer func() {
 			if v := recover(); v != nil {

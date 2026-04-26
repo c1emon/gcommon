@@ -26,13 +26,14 @@ func Test_http_svc(t *testing.T) {
 
 	repo := service.NewServiceRepo()
 
-	r := ginx.NewDefaultEngine(ginx.DefaultEngineConfig{})
+	r := ginx.NewDefaultEngine(ginx.DefaultEngineConfig{Logger: logger})
 
 	r.GET("/", func(c *gin.Context) {
 		c.String(http.StatusOK, "Welcome Gin Server")
 	})
 
 	repo.Register(ginx.NewHTTPService(ginx.HTTPServiceConfig{
+		Logger: logger,
 		Server: &http.Server{
 			Addr:    ":8080",
 			Handler: r,

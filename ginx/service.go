@@ -60,16 +60,21 @@ func (s *HTTPService) Stop(timeOutCtx context.Context) error {
 type HTTPServiceConfig struct {
 	Name   string
 	Server *http.Server
+	Logger *slog.Logger
 }
 
 // NewHTTPService builds an HTTPService from a preconfigured *http.Server.
 // If Name is empty it defaults to "http@<addr>".
+// Logger must be non-nil.
 func NewHTTPService(cfg HTTPServiceConfig) *HTTPService {
 	server := cfg.Server
 	if server == nil {
 		server = &http.Server{}
 	}
-	logger := logx.Default()
+	if cfg.Logger == nil {
+		panic("ginx: HTTPServiceConfig.Logger must be non-nil")
+	}
+	logger := cfg.Logger
 	name := cfg.Name
 	if name == "" {
 		name = fmt.Sprintf("http@%s", server.Addr)
@@ -87,12 +92,15 @@ type GinServiceConfig struct {
 	Name   string
 	Addr   string
 	Engine *gin.Engine
+	Logger *slog.Logger
 }
 
 // NewGinService builds an HTTPService from a gin engine and listen address.
+// Logger must be non-nil.
 func NewGinService(cfg GinServiceConfig) *HTTPService {
 	return NewHTTPService(HTTPServiceConfig{
-		Name: cfg.Name,
+		Name:   cfg.Name,
+		Logger: cfg.Logger,
 		Server: &http.Server{
 			Addr:    cfg.Addr,
 			Handler: cfg.Engine,

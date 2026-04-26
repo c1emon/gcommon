@@ -1,6 +1,8 @@
 package ginx
 
 import (
+	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -46,7 +48,9 @@ func TestEngineBuilderMiddlewareOrder(t *testing.T) {
 
 func TestNewDefaultEngineIncludesErrorResponder(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	eng := NewDefaultEngine(DefaultEngineConfig{})
+	eng := NewDefaultEngine(DefaultEngineConfig{
+		Logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
+	})
 	eng.GET("/err", func(c *gin.Context) {
 		_ = c.Error(assertErr{})
 	})

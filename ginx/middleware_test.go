@@ -85,7 +85,8 @@ func TestErrorResponderHttpErrorData(t *testing.T) {
 func TestRecoveryWritesInternalError(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	eng := NewBareEngine()
-	eng.Use(ErrorResponder(), Recovery())
+	lg := slog.New(slog.NewTextHandler(io.Discard, nil))
+	eng.Use(ErrorResponder(), Recovery(lg))
 	eng.GET("/panic", func(c *gin.Context) {
 		panic("boom")
 	})
@@ -103,14 +104,9 @@ func TestLoggerUsesRequestContext(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	capture := &contextCaptureHandler{}
 	logger := slog.New(capture)
-	oldDefault := slog.Default()
-	slog.SetDefault(logger)
-	t.Cleanup(func() {
-		slog.SetDefault(oldDefault)
-	})
 
 	eng := NewBareEngine()
-	eng.Use(Logger())
+	eng.Use(Logger(logger))
 	eng.GET("/ok", func(c *gin.Context) {
 		c.Status(http.StatusOK)
 	})
@@ -146,14 +142,8 @@ func TestLoggerDetailAttrsByLevel(t *testing.T) {
 				delegate: capture,
 			})
 
-			oldDefault := slog.Default()
-			slog.SetDefault(logger)
-			t.Cleanup(func() {
-				slog.SetDefault(oldDefault)
-			})
-
 			eng := NewBareEngine()
-			eng.Use(Logger())
+			eng.Use(Logger(logger))
 			eng.POST("/ok", func(c *gin.Context) {
 				c.Header("X-Resp-Test", "resp-ok")
 				body, _ := io.ReadAll(c.Request.Body)
@@ -219,14 +209,8 @@ func TestLoggerBodyTruncationAtDebug(t *testing.T) {
 		delegate: capture,
 	})
 
-	oldDefault := slog.Default()
-	slog.SetDefault(logger)
-	t.Cleanup(func() {
-		slog.SetDefault(oldDefault)
-	})
-
 	eng := NewBareEngine()
-	eng.Use(Logger())
+	eng.Use(Logger(logger))
 	eng.POST("/truncate", func(c *gin.Context) {
 		body, _ := io.ReadAll(c.Request.Body)
 		c.String(http.StatusOK, "resp:"+string(body))

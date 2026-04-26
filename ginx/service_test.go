@@ -2,6 +2,8 @@ package ginx
 
 import (
 	"context"
+	"io"
+	"log/slog"
 	"net/http"
 	"testing"
 	"time"
@@ -9,8 +11,13 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+func testDiscardLogger() *slog.Logger {
+	return slog.New(slog.NewTextHandler(io.Discard, nil))
+}
+
 func TestNewHTTPServiceNameDefault(t *testing.T) {
 	svc := NewHTTPService(HTTPServiceConfig{
+		Logger: testDiscardLogger(),
 		Server: &http.Server{
 			Addr:    "127.0.0.1:18080",
 			Handler: http.NewServeMux(),
@@ -23,6 +30,7 @@ func TestNewHTTPServiceNameDefault(t *testing.T) {
 
 func TestHTTPServiceStartInvalidAddr(t *testing.T) {
 	svc := NewHTTPService(HTTPServiceConfig{
+		Logger: testDiscardLogger(),
 		Server: &http.Server{
 			Addr:    "bad::addr",
 			Handler: http.NewServeMux(),
@@ -36,7 +44,8 @@ func TestHTTPServiceStartInvalidAddr(t *testing.T) {
 
 func TestHTTPServiceStartAndStop(t *testing.T) {
 	svc := NewHTTPService(HTTPServiceConfig{
-		Name: "test-http",
+		Name:   "test-http",
+		Logger: testDiscardLogger(),
 		Server: &http.Server{
 			Addr:    "127.0.0.1:0",
 			Handler: http.NewServeMux(),
@@ -61,6 +70,7 @@ func TestNewGinService(t *testing.T) {
 		Name:   "engine-http",
 		Addr:   "127.0.0.1:18082",
 		Engine: engine,
+		Logger: testDiscardLogger(),
 	})
 
 	if svc.Name() != "engine-http" {

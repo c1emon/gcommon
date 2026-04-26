@@ -15,9 +15,11 @@ import (
 const maxLoggedBodyBytes = 4096
 
 // Logger emits one structured log line per request after the handler returns.
-// It always writes via logx.Default().
-func Logger() gin.HandlerFunc {
-	logger := logx.Default()
+// logger must be non-nil.
+func Logger(logger *slog.Logger) gin.HandlerFunc {
+	if logger == nil {
+		panic("ginx: Logger called with nil *slog.Logger")
+	}
 	return func(c *gin.Context) {
 		start := time.Now()
 		ctx := c.Request.Context()

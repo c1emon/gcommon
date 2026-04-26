@@ -1,6 +1,10 @@
 package ginx
 
-import "github.com/gin-gonic/gin"
+import (
+	"log/slog"
+
+	"github.com/gin-gonic/gin"
+)
 
 // EngineBuilder creates a gin engine by applying global middleware in order.
 type EngineBuilder struct {
@@ -34,15 +38,21 @@ func NewBareEngine() *gin.Engine {
 
 // DefaultEngineConfig controls middleware wiring for NewDefaultEngine.
 type DefaultEngineConfig struct {
+	Logger *slog.Logger
+
 	Middlewares []gin.HandlerFunc
 }
 
 // NewDefaultEngine creates an engine with the default middleware pipeline.
 // Middleware order is fixed so logger observes the final response state.
-// Logging is backed by logx.Default(), so call logx.Init(...) during app startup.
+// cfg.Logger must be non-nil; it is passed to [Logger] and [Recovery].
 func NewDefaultEngine(cfg DefaultEngineConfig) *gin.Engine {
+	if cfg.Logger == nil {
+		panic("ginx: DefaultEngineConfig.Logger must be non-nil")
+	}
+	SetGinSlogWriters(cfg.Logger)
 	builder := NewEngineBuilder().
-		Use(Logger(), ErrorResponder(), Recovery()).
+		Use(Logger(cfg.Logger), ErrorResponder(), Recovery(cfg.Logger)).
 		Use(cfg.Middlewares...)
 	return builder.Build()
 }
