@@ -32,6 +32,8 @@ type clientRegisterOpts struct {
 	retryDisabled     bool
 	strictJSONTypeSet bool
 	strictJSONType    bool
+	businessErrorSet  bool
+	businessError     bool
 
 	logDisabled  bool
 	clientLogger *slog.Logger
@@ -172,6 +174,20 @@ func WithoutStrictJSONContentType() ClientOption {
 	return util.WrapFuncOption(func(o *clientRegisterOpts) {
 		o.strictJSONTypeSet = true
 		o.strictJSONType = false
+	})
+}
+
+func WithBusinessError() ClientOption {
+	return util.WrapFuncOption(func(o *clientRegisterOpts) {
+		o.businessErrorSet = true
+		o.businessError = true
+	})
+}
+
+func DisableBusinessError() ClientOption {
+	return util.WrapFuncOption(func(o *clientRegisterOpts) {
+		o.businessErrorSet = true
+		o.businessError = false
 	})
 }
 

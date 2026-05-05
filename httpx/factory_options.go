@@ -68,3 +68,15 @@ func WithGlobalStrictJSONContentType() FactoryOption {
 		f.strictJSONType = true
 	})
 }
+
+func WithGlobalBusinessError() FactoryOption {
+	return util.WrapFuncOption(func(f *ClientFactory) {
+		f.globalBusinessError = true
+	})
+}
+
+func DisableGlobalBusinessError() FactoryOption {
+	return util.WrapFuncOption(func(f *ClientFactory) {
+		f.globalBusinessError = false
+	})
+}

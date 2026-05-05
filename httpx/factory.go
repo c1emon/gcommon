@@ -29,6 +29,7 @@ type ClientFactory struct {
 	globalBrowserProfile    BrowserProfile
 	hasGlobalBrowserProfile bool
 	strictJSONType          bool
+	globalBusinessError     bool
 }
 
 // NewClientFactory constructs a client factory and applies [FactoryOption] values in order.
@@ -198,11 +199,17 @@ func (f *ClientFactory) buildReqClient(name string, o *clientRegisterOpts) *req.
 	if lg := o.effectiveLogger(f); lg != nil {
 		c.OnAfterResponse(interceptors.ResponseLogger(lg))
 	}
-	strictJSONType := f.strictJSONType
-	if o.strictJSONTypeSet {
-		strictJSONType = o.strictJSONType
+	businessError := f.globalBusinessError
+	if o.businessErrorSet {
+		businessError = o.businessError
 	}
-	c.OnAfterResponse(interceptors.Error(strictJSONType))
+	if businessError {
+		strictJSONType := f.strictJSONType
+		if o.strictJSONTypeSet {
+			strictJSONType = o.strictJSONType
+		}
+		c.OnAfterResponse(interceptors.Error(strictJSONType))
+	}
 
 	return c
 }

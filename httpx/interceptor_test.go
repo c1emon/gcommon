@@ -68,7 +68,7 @@ func TestErrorInterceptor_businessError(t *testing.T) {
 	t.Cleanup(srv.Close)
 
 	f := NewClientFactory()
-	f.RegisterProfile("t")
+	f.RegisterProfile("t", WithBusinessError())
 	c := f.MustNewClient("t")
 	_, err := c.R().Get(srv.URL)
 	if err == nil {
@@ -83,7 +83,7 @@ func TestErrorInterceptor_strictContentType_plainTextSkipped(t *testing.T) {
 	}))
 	t.Cleanup(srv.Close)
 
-	f := NewClientFactory(WithGlobalStrictJSONContentType())
+	f := NewClientFactory(WithGlobalBusinessError(), WithGlobalStrictJSONContentType())
 	f.RegisterProfile("t")
 	c := f.MustNewClient("t")
 	_, err := c.R().Get(srv.URL)
@@ -99,11 +99,62 @@ func TestErrorInterceptor_strictContentType_applicationJSONParsed(t *testing.T) 
 	}))
 	t.Cleanup(srv.Close)
 
-	f := NewClientFactory(WithGlobalStrictJSONContentType())
+	f := NewClientFactory(WithGlobalBusinessError(), WithGlobalStrictJSONContentType())
 	f.RegisterProfile("t")
 	c := f.MustNewClient("t")
 	_, err := c.R().Get(srv.URL)
 	if err == nil {
 		t.Fatal("want error for json content-type with non-zero code")
+	}
+}
+
+func TestBusinessError_defaultDoesNotMapEnvelope(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"code":400,"msg":"third-party","ts":1}`))
+	}))
+	t.Cleanup(srv.Close)
+
+	f := NewClientFactory()
+	f.RegisterProfile("third-party")
+	resp, err := f.MustNewClient("third-party").R().Get(srv.URL)
+	if err != nil {
+		t.Fatalf("default client should not map third-party envelope: %v", err)
+	}
+	if string(resp.Bytes()) != `{"code":400,"msg":"third-party","ts":1}` {
+		t.Fatalf("response body changed: %q", string(resp.Bytes()))
+	}
+}
+
+func TestBusinessError_clientOptInMapsEnvelope(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"code":400,"msg":"bad","ts":1}`))
+	}))
+	t.Cleanup(srv.Close)
+
+	f := NewClientFactory()
+	f.RegisterProfile("biz", WithBusinessError())
+	_, err := f.MustNewClient("biz").R().Get(srv.URL)
+	if err == nil {
+		t.Fatal("want business error when WithBusinessError is enabled")
+	}
+}
+
+func TestBusinessError_globalEnableClientDisable(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"code":123,"msg":"x"}`))
+	}))
+	t.Cleanup(srv.Close)
+
+	f := NewClientFactory(WithGlobalBusinessError())
+	f.RegisterProfile("raw", DisableBusinessError())
+	resp, err := f.MustNewClient("raw").R().Get(srv.URL)
+	if err != nil {
+		t.Fatalf("DisableBusinessError should leave response raw: %v", err)
+	}
+	if string(resp.Bytes()) != `{"code":123,"msg":"x"}` {
+		t.Fatalf("body changed: %q", string(resp.Bytes()))
 	}
 }
