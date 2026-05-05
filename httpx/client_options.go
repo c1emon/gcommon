@@ -201,7 +201,7 @@ func DisableBusinessError() ClientOption {
 	})
 }
 
-// WithLogger overrides the manager logger for this client. Pass nil to disable logging for this client.
+// WithLogger overrides the factory logger for this client. Pass nil to disable logging for this client.
 func WithLogger(l *slog.Logger) ClientOption {
 	return util.WrapFuncOption(func(o *clientRegisterOpts) {
 		o.clientLogSet = true
