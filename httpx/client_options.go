@@ -2,6 +2,7 @@ package httpx
 
 import (
 	"log/slog"
+	"net/http"
 	"time"
 
 	"github.com/c1emon/gcommon/util"
@@ -34,6 +35,11 @@ type clientRegisterOpts struct {
 	strictJSONType    bool
 	businessErrorSet  bool
 	businessError     bool
+
+	cookieJar           http.CookieJar
+	cookieJarSet        bool
+	cookieJarFactory    CookieJarFactory
+	cookieJarFactorySet bool
 
 	logDisabled  bool
 	clientLogger *slog.Logger

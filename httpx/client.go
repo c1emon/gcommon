@@ -31,6 +31,17 @@ func (c *Client) Name() string {
 	return c.name
 }
 
+// Clone returns an unmanaged copy of this client wrapper.
+func (c *Client) Clone() *Client {
+	if c == nil {
+		return nil
+	}
+	if c.Client == nil {
+		return &Client{name: c.name}
+	}
+	return &Client{Client: c.Client.Clone(), name: c.name}
+}
+
 func (c *Client) Req() *Request {
 	return &Request{c.R()}
 }

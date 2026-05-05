@@ -164,6 +164,12 @@ func (f *ClientFactory) buildReqClient(name string, o *clientRegisterOpts) *req.
 	}
 	applyRetryPolicy(c, effRetry)
 
+	if o.cookieJarSet {
+		c.SetCookieJar(o.cookieJar)
+	} else if o.cookieJarFactorySet {
+		c.SetCookieJarFactory(o.cookieJarFactory)
+	}
+
 	f.applyLimiterMiddleware(c, o)
 
 	wrapReq := func(ri ReqInterceptor) {
