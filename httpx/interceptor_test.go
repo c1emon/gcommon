@@ -15,8 +15,9 @@ func TestErrorInterceptor_bodyStillReadable(t *testing.T) {
 	}))
 	t.Cleanup(srv.Close)
 
-	m := NewManager()
-	c := m.Register("t")
+	f := NewClientFactory()
+	f.RegisterProfile("t")
+	c := f.MustNewClient("t")
 
 	resp, err := c.R().Get(srv.URL)
 	if err != nil {
@@ -37,8 +38,8 @@ func TestErrorInterceptor_secondHook_seesBody(t *testing.T) {
 	t.Cleanup(srv.Close)
 
 	var second []byte
-	m := NewManager()
-	c := m.Register("t",
+	f := NewClientFactory()
+	f.RegisterProfile("t",
 		WithRespInterceptor(func(_ *Client, resp *Response) error {
 			b, err := resp.ToBytes()
 			if err != nil {
@@ -48,6 +49,7 @@ func TestErrorInterceptor_secondHook_seesBody(t *testing.T) {
 			return nil
 		}),
 	)
+	c := f.MustNewClient("t")
 
 	_, err := c.R().Get(srv.URL)
 	if err != nil {
@@ -65,8 +67,9 @@ func TestErrorInterceptor_businessError(t *testing.T) {
 	}))
 	t.Cleanup(srv.Close)
 
-	m := NewManager()
-	c := m.Register("t")
+	f := NewClientFactory()
+	f.RegisterProfile("t")
+	c := f.MustNewClient("t")
 	_, err := c.R().Get(srv.URL)
 	if err == nil {
 		t.Fatal("want error for non-zero code")
@@ -80,8 +83,9 @@ func TestErrorInterceptor_strictContentType_plainTextSkipped(t *testing.T) {
 	}))
 	t.Cleanup(srv.Close)
 
-	m := NewManager(WithGlobalStrictJSONContentType())
-	c := m.Register("t")
+	f := NewClientFactory(WithGlobalStrictJSONContentType())
+	f.RegisterProfile("t")
+	c := f.MustNewClient("t")
 	_, err := c.R().Get(srv.URL)
 	if err != nil {
 		t.Fatalf("strict mode should skip non-json content-type, got %v", err)
@@ -95,8 +99,9 @@ func TestErrorInterceptor_strictContentType_applicationJSONParsed(t *testing.T) 
 	}))
 	t.Cleanup(srv.Close)
 
-	m := NewManager(WithGlobalStrictJSONContentType())
-	c := m.Register("t")
+	f := NewClientFactory(WithGlobalStrictJSONContentType())
+	f.RegisterProfile("t")
+	c := f.MustNewClient("t")
 	_, err := c.R().Get(srv.URL)
 	if err == nil {
 		t.Fatal("want error for json content-type with non-zero code")

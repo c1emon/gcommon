@@ -21,8 +21,8 @@ func TestRetry_retries5xx(t *testing.T) {
 	}))
 	t.Cleanup(srv.Close)
 
-	m := NewManager()
-	c := m.Register("c",
+	f := NewClientFactory()
+	f.RegisterProfile("c",
 		WithBaseURL(srv.URL),
 		WithRetry(RetryPolicy{
 			Enabled:    true,
@@ -31,6 +31,7 @@ func TestRetry_retries5xx(t *testing.T) {
 			MaxBackoff: 10 * time.Millisecond,
 		}),
 	)
+	c := f.MustNewClient("c")
 
 	resp, err := c.R().Get("/")
 	if err != nil {

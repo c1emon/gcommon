@@ -13,8 +13,9 @@ func TestBrowser_chromeSetsUserAgent(t *testing.T) {
 	}))
 	t.Cleanup(srv.Close)
 
-	m := NewManager()
-	c := m.Register("c", WithBaseURL(srv.URL), WithBrowser(BrowserChrome))
+	f := NewClientFactory()
+	f.RegisterProfile("c", WithBaseURL(srv.URL), WithBrowser(BrowserChrome))
+	c := f.MustNewClient("c")
 	resp, err := c.R().Get("/")
 	if err != nil {
 		t.Fatal(err)
@@ -31,8 +32,9 @@ func TestBrowser_profileWinsOverUserAgent(t *testing.T) {
 	}))
 	t.Cleanup(srv.Close)
 
-	m := NewManager()
-	c := m.Register("c", WithBaseURL(srv.URL), WithBrowser(BrowserChrome), WithUserAgent("custom-ua-should-not-win"))
+	f := NewClientFactory()
+	f.RegisterProfile("c", WithBaseURL(srv.URL), WithBrowser(BrowserChrome), WithUserAgent("custom-ua-should-not-win"))
+	c := f.MustNewClient("c")
 	resp, err := c.R().Get("/")
 	if err != nil {
 		t.Fatal(err)

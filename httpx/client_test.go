@@ -9,7 +9,7 @@ import (
 	"github.com/c1emon/gcommon/httpx"
 )
 
-func TestManagerRegister_clientIsolation(t *testing.T) {
+func TestClientFactory_clientIsolation(t *testing.T) {
 	a := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write([]byte("a"))
 	}))
@@ -19,9 +19,11 @@ func TestManagerRegister_clientIsolation(t *testing.T) {
 	t.Cleanup(a.Close)
 	t.Cleanup(b.Close)
 
-	m := httpx.NewManager()
-	ca := m.Register("a", httpx.WithBaseURL(a.URL))
-	cb := m.Register("b", httpx.WithBaseURL(b.URL))
+	f := httpx.NewClientFactory()
+	f.RegisterProfile("a", httpx.WithBaseURL(a.URL))
+	f.RegisterProfile("b", httpx.WithBaseURL(b.URL))
+	ca := f.MustNewClient("a")
+	cb := f.MustNewClient("b")
 
 	ra, err := ca.R().Get("/")
 	if err != nil {
