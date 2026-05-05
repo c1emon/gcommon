@@ -41,6 +41,9 @@ type clientRegisterOpts struct {
 	cookieJarFactory    CookieJarFactory
 	cookieJarFactorySet bool
 
+	redirectPolicySet bool
+	redirectPolicies  []RedirectPolicy
+
 	logDisabled  bool
 	clientLogger *slog.Logger
 	clientLogSet bool
@@ -77,6 +80,7 @@ func (o clientRegisterOpts) clone() clientRegisterOpts {
 	}
 	out.clientReqInterceptors = append([]ReqInterceptor(nil), o.clientReqInterceptors...)
 	out.clientRespInterceptors = append([]RespInterceptor(nil), o.clientRespInterceptors...)
+	out.redirectPolicies = append([]RedirectPolicy(nil), o.redirectPolicies...)
 	return out
 }
 

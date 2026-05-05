@@ -127,6 +127,9 @@ func (f *ClientFactory) buildReqClient(name string, o *clientRegisterOpts) *req.
 	if o.timeout > 0 {
 		c.SetTimeout(o.timeout)
 	}
+	if o.redirectPolicySet {
+		c.SetRedirectPolicy(o.redirectPolicies...)
+	}
 	for k, v := range f.globalHeaders {
 		c.SetCommonHeader(k, v)
 	}
