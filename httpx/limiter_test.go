@@ -18,8 +18,9 @@ func TestLimiter_globalAndClientAllowRequests(t *testing.T) {
 	gl := rate.NewLimiter(rate.Every(time.Millisecond), 32)
 	cl := rate.NewLimiter(rate.Every(time.Millisecond), 32)
 
-	m := NewManager(WithGlobalLimiter(gl))
-	c := m.Register("c", WithBaseURL(srv.URL), WithLimiter(cl))
+	f := NewClientFactory(WithGlobalLimiter(gl))
+	f.RegisterProfile("c", WithBaseURL(srv.URL), WithLimiter(cl))
+	c := f.MustNewClient("c")
 
 	for range 5 {
 		_, err := c.R().Get("/")

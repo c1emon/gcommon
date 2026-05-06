@@ -1,7 +1,7 @@
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **gcommon** (1345 symbols, 2725 relationships, 71 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **gcommon** (1485 symbols, 3030 relationships, 80 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 
@@ -39,19 +39,5 @@ This project is indexed by GitNexus as **gcommon** (1345 symbols, 2725 relations
 | Rename / extract / split / refactor | `.claude/skills/gitnexus/gitnexus-refactoring/SKILL.md` |
 | Tools, resources, schema reference | `.claude/skills/gitnexus/gitnexus-guide/SKILL.md` |
 | Index, status, clean, wiki CLI commands | `.claude/skills/gitnexus/gitnexus-cli/SKILL.md` |
-| Work in the Httpx area (61 symbols) | `.claude/skills/generated/httpx/SKILL.md` |
-| Work in the Ginx area (51 symbols) | `.claude/skills/generated/ginx/SKILL.md` |
-| Work in the Logx area (21 symbols) | `.claude/skills/generated/logx/SKILL.md` |
-| Work in the Optional area (20 symbols) | `.claude/skills/generated/optional/SKILL.md` |
-| Work in the Errorx area (16 symbols) | `.claude/skills/generated/errorx/SKILL.md` |
-| Work in the Vo area (15 symbols) | `.claude/skills/generated/vo/SKILL.md` |
-| Work in the Server area (14 symbols) | `.claude/skills/generated/server/SKILL.md` |
-| Work in the Pinger area (11 symbols) | `.claude/skills/generated/pinger/SKILL.md` |
-| Work in the Tree area (10 symbols) | `.claude/skills/generated/tree/SKILL.md` |
-| Work in the Consul area (7 symbols) | `.claude/skills/generated/consul/SKILL.md` |
-| Work in the Test area (6 symbols) | `.claude/skills/generated/test/SKILL.md` |
-| Work in the Http area (5 symbols) | `.claude/skills/generated/http/SKILL.md` |
-| Work in the Data area (5 symbols) | `.claude/skills/generated/data/SKILL.md` |
-| Work in the Stack area (4 symbols) | `.claude/skills/generated/stack/SKILL.md` |
 
 <!-- gitnexus:end -->

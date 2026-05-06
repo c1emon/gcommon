@@ -12,7 +12,7 @@ type (
 	RespInterceptor func(client *Client, resp *Response) error
 )
 
-// Client wraps a single imroc/req [req.Client], usually created by [Manager.Register].
+// Client wraps a single imroc/req [req.Client], usually created by [ClientFactory.NewClient] or [ClientFactory.MustNewClient].
 type Client struct {
 	*req.Client
 	name string
@@ -26,9 +26,20 @@ type Response struct {
 	*req.Response
 }
 
-// Name is the key passed to [Manager.Register].
+// Name is the profile name used to create this client.
 func (c *Client) Name() string {
 	return c.name
+}
+
+// Clone returns an unmanaged copy of this client wrapper.
+func (c *Client) Clone() *Client {
+	if c == nil {
+		return nil
+	}
+	if c.Client == nil {
+		return &Client{name: c.name}
+	}
+	return &Client{Client: c.Client.Clone(), name: c.name}
 }
 
 func (c *Client) Req() *Request {

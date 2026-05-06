@@ -2,6 +2,7 @@ package httpx
 
 import (
 	"log/slog"
+	"net/http"
 	"time"
 
 	"github.com/c1emon/gcommon/util"
@@ -32,15 +33,25 @@ type clientRegisterOpts struct {
 	retryDisabled     bool
 	strictJSONTypeSet bool
 	strictJSONType    bool
+	businessErrorSet  bool
+	businessError     bool
+
+	cookieJar           http.CookieJar
+	cookieJarSet        bool
+	cookieJarFactory    CookieJarFactory
+	cookieJarFactorySet bool
+
+	redirectPolicySet bool
+	redirectPolicies  []RedirectPolicy
 
 	logDisabled  bool
 	clientLogger *slog.Logger
 	clientLogSet bool
 }
 
-func (o *clientRegisterOpts) effectiveLogger(m *Manager) *slog.Logger {
+func (o *clientRegisterOpts) effectiveLogger(f *ClientFactory) *slog.Logger {
 	if !o.clientLogSet {
-		return m.logger
+		return f.logger
 	}
 	if o.logDisabled {
 		return nil
@@ -57,6 +68,28 @@ func (o *clientRegisterOpts) addHeader(k, v string) {
 
 func newClientRegisterOpts() clientRegisterOpts {
 	return clientRegisterOpts{}
+}
+
+func (o clientRegisterOpts) clone() clientRegisterOpts {
+	out := o
+	if o.headers != nil {
+		out.headers = make(map[string]string, len(o.headers))
+		for k, v := range o.headers {
+			out.headers[k] = v
+		}
+	}
+	out.clientReqInterceptors = append([]ReqInterceptor(nil), o.clientReqInterceptors...)
+	out.clientRespInterceptors = append([]RespInterceptor(nil), o.clientRespInterceptors...)
+	out.redirectPolicies = append([]RedirectPolicy(nil), o.redirectPolicies...)
+	return out
+}
+
+func newClientRegisterOptsFrom(opts ...ClientOption) clientRegisterOpts {
+	o := newClientRegisterOpts()
+	for _, opt := range opts {
+		opt.Apply(&o)
+	}
+	return o
 }
 
 func WithBaseURL(url string) ClientOption {
@@ -154,7 +187,21 @@ func WithoutStrictJSONContentType() ClientOption {
 	})
 }
 
-// WithLogger overrides the manager logger for this client. Pass nil to disable logging for this client.
+func WithBusinessError() ClientOption {
+	return util.WrapFuncOption(func(o *clientRegisterOpts) {
+		o.businessErrorSet = true
+		o.businessError = true
+	})
+}
+
+func DisableBusinessError() ClientOption {
+	return util.WrapFuncOption(func(o *clientRegisterOpts) {
+		o.businessErrorSet = true
+		o.businessError = false
+	})
+}
+
+// WithLogger overrides the factory logger for this client. Pass nil to disable logging for this client.
 func WithLogger(l *slog.Logger) ClientOption {
 	return util.WrapFuncOption(func(o *clientRegisterOpts) {
 		o.clientLogSet = true
