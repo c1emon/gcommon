@@ -195,6 +195,10 @@ func (f *ClientFactory) buildReqClient(name string, o *clientRegisterOpts) *req.
 		wrapReq(ri)
 	}
 
+	if o.browserNavigation != nil {
+		installBrowserNavigation(c, o.browserNavigation)
+	}
+
 	if lg := o.effectiveLogger(f); lg != nil {
 		c.OnBeforeRequest(interceptors.RequestLogger(lg))
 	}
