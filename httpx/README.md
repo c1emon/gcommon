@@ -123,6 +123,7 @@ _ = c
 - `WithHeader(key, val string)` / `WithHeaders(map[string]string)`
 - `WithUserAgent(ua string)`
 - `WithBrowser(p BrowserProfile)`
+- `WithBrowserNavigation(opts ...BrowserNavigationOption)`
 - `WithLimiter(l *rate.Limiter)` / `DisableLimiter()`
 - `WithRetry(p RetryPolicy)` / `DisableRetry()`
 - `WithReqInterceptor(i ReqInterceptor)` / `WithRespInterceptor(i RespInterceptor)`
@@ -131,6 +132,13 @@ _ = c
 - `WithCookieJar(jar http.CookieJar)` / `WithCookieJarFactory(factory CookieJarFactory)`
 - `WithRedirectPolicy(policies ...RedirectPolicy)`
 - `WithLogger(l *slog.Logger)`（传 `nil` 可禁用该 client 日志）
+
+### BrowserNavigationOption
+
+- `WithReferrerPolicy(policy ReferrerPolicy)`
+- `WithXHRForJSON(enabled bool)`
+- `WithDefaultXRequestedWith(enabled bool)`
+- `WithDefaultSecFetchUser(enabled bool)`
 
 ### Client 方法
 
@@ -141,6 +149,9 @@ _ = c
 - `(*Client).SetCookieJarFactory(factory CookieJarFactory) *Client`
 - `(*Client).GetCookies(rawURL string) ([]*http.Cookie, error)`
 - `(*Client).SetRedirectPolicy(policies ...RedirectPolicy) *Client`
+- `(*Request).WithBrowserRequestKind(kind BrowserRequestKind) *Request`
+- `(*Request).AsXHR() *Request`
+- `(*Request).AsNavigation() *Request`
 
 ### Cookie 和 Redirect
 
@@ -245,6 +256,39 @@ _ = c
 ```
 
 当同时设置 `WithBrowser(...)` 与 `WithUserAgent(...)` 时，优先使用 `BrowserProfile`。
+
+## 浏览器导航 header
+
+`WithBrowser(...)` 负责 TLS/HTTP2 指纹、静态浏览器 header 和 header order；`WithBrowserNavigation(...)` 负责同一个 client 内动态变化的浏览器导航 header，例如 `Referer`、`Origin`、`Sec-Fetch-*` 和按请求类型调整的 `Accept`。
+
+默认行为：
+
+- 首次请求发送 `Sec-Fetch-Site: none`，不发送 `Referer`。
+- 同源后续请求使用上一次完整 URL 作为 `Referer`。
+- 跨源后续请求在默认 `strict-origin-when-cross-origin` 策略下使用上一次 origin 作为 `Referer`。
+- `POST` 请求会追加当前 URL 的 `Origin`。
+- JSON 请求默认按 XHR 设置 `Accept`、`Sec-Fetch-Mode`、`Sec-Fetch-Dest`。
+- HTML/form 请求默认按页面导航设置 header。
+- 单次请求显式设置的 header 不会被动态导航 header 覆盖。
+- `NewClient` / `MustNewClient` 会创建新的浏览器导航状态；`Clone()` 用于同一会话内的临时变体，并共享导航状态。
+- 启用浏览器导航的原始 client 及其 clones 共享同一组导航状态，语义上是一个顺序浏览器会话。不要跨用户、跨登录会话复用；依赖“上一页”语义时，也不要并发使用这一组实例发请求。
+
+```go
+factory.RegisterProfile("flow-upstream",
+	httpx.WithBrowser(httpx.BrowserChrome),
+	httpx.WithBrowserNavigation(
+		httpx.WithReferrerPolicy(httpx.ReferrerPolicyStrictOriginWhenCrossOrigin),
+		httpx.WithXHRForJSON(true),
+	),
+)
+
+session := factory.MustNewClient("flow-upstream")
+_, _ = session.Req().Get("https://login.example.com/")
+_, _ = session.Req().AsXHR().SetBodyJsonMarshal(map[string]string{"step": "check"}).Post("https://login.example.com/api/check")
+
+noRedirect := session.Clone().SetRedirectPolicy(httpx.NoRedirectPolicy())
+_, _ = noRedirect.Req().Get("https://login.example.com/redirect-once")
+```
 
 ## 浏览器式会话
 

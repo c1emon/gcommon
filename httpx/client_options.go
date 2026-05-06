@@ -44,6 +44,8 @@ type clientRegisterOpts struct {
 	redirectPolicySet bool
 	redirectPolicies  []RedirectPolicy
 
+	browserNavigation *browserNavigationConfig
+
 	logDisabled  bool
 	clientLogger *slog.Logger
 	clientLogSet bool
@@ -81,6 +83,7 @@ func (o clientRegisterOpts) clone() clientRegisterOpts {
 	out.clientReqInterceptors = append([]ReqInterceptor(nil), o.clientReqInterceptors...)
 	out.clientRespInterceptors = append([]RespInterceptor(nil), o.clientRespInterceptors...)
 	out.redirectPolicies = append([]RedirectPolicy(nil), o.redirectPolicies...)
+	out.browserNavigation = o.browserNavigation.clone()
 	return out
 }
 
