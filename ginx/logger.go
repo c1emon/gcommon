@@ -7,7 +7,7 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/c1emon/gcommon/logx"
+	"github.com/c1emon/gcommon/logx/v2"
 	"github.com/gin-gonic/gin"
 )
 

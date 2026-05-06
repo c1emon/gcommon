@@ -11,8 +11,8 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/c1emon/gcommon/health"
-	httphealth "github.com/c1emon/gcommon/health/http"
+	"github.com/c1emon/gcommon/health/v2"
+	httphealth "github.com/c1emon/gcommon/health/v2/http"
 )
 
 func main() {
@@ -28,7 +28,7 @@ func main() {
 }
 ```
 
-包名 **`httphealth`**，建议始终用 **`import httphealth "github.com/c1emon/gcommon/health/http"`** 避免与标准库 `net/http` 混淆。
+包名 **`httphealth`**，建议始终用 **`import httphealth "github.com/c1emon/gcommon/health/v2/http"`** 避免与标准库 `net/http` 混淆。
 
 - **`ServiceName`**：必填，对应 JSON 里 `component.name`。
 - **`Version`**：可选，对应 `component.version`。

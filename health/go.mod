@@ -1,4 +1,4 @@
-module github.com/c1emon/gcommon/health
+module github.com/c1emon/gcommon/health/v2
 
 go 1.25.0
 

@@ -1,9 +1,9 @@
-module github.com/c1emon/gcommon/cloud
+module github.com/c1emon/gcommon/cloud/v2
 
 go 1.25.0
 
 require (
-	github.com/c1emon/gcommon v0.0.0
+	github.com/c1emon/gcommon/v2 v2.0.0
 	github.com/hashicorp/consul/api v1.30.0
 )
 
@@ -27,4 +27,4 @@ require (
 	golang.org/x/sys v0.43.0 // indirect
 )
 
-replace github.com/c1emon/gcommon => ../
+replace github.com/c1emon/gcommon/v2 => ../

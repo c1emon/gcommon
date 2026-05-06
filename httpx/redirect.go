@@ -1,7 +1,7 @@
 package httpx
 
 import (
-	"github.com/c1emon/gcommon/util"
+	"github.com/c1emon/gcommon/v2/util"
 	"github.com/imroc/req/v3"
 )
 

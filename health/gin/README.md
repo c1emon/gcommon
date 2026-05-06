@@ -10,8 +10,8 @@ package main
 import (
 	"log"
 
-	"github.com/c1emon/gcommon/health"
-	healthgin "github.com/c1emon/gcommon/health/gin"
+	"github.com/c1emon/gcommon/health/v2"
+	healthgin "github.com/c1emon/gcommon/health/v2/gin"
 	"github.com/gin-gonic/gin"
 )
 

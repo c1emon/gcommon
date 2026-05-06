@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/c1emon/gcommon/data"
+	"github.com/c1emon/gcommon/v2/data"
 )
 
 type dto struct {

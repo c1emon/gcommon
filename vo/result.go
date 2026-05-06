@@ -3,7 +3,7 @@ package vo
 import (
 	"time"
 
-	"github.com/c1emon/gcommon/optional"
+	"github.com/c1emon/gcommon/v2/optional"
 )
 
 type ResultTypes[T any] interface {

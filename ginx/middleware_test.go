@@ -11,7 +11,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/c1emon/gcommon/errorx"
+	"github.com/c1emon/gcommon/v2/errorx"
 	"github.com/gin-gonic/gin"
 )
 
@@ -138,7 +138,7 @@ func TestLoggerDetailAttrsByLevel(t *testing.T) {
 				Level: tt.level,
 			}))
 			logger = slog.New(&levelAwareCapture{
-				level:   tt.level,
+				level:    tt.level,
 				delegate: capture,
 			})
 

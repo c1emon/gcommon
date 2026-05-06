@@ -4,8 +4,8 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/c1emon/gcommon/errorx"
-	"github.com/c1emon/gcommon/vo"
+	"github.com/c1emon/gcommon/v2/errorx"
+	"github.com/c1emon/gcommon/v2/vo"
 	"github.com/gin-gonic/gin"
 )
 

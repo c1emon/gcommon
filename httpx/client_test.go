@@ -8,7 +8,7 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/c1emon/gcommon/httpx"
+	"github.com/c1emon/gcommon/httpx/v2"
 )
 
 func TestClientFactory_clientIsolation(t *testing.T) {

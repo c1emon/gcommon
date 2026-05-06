@@ -11,9 +11,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/c1emon/gcommon/service"
+	"github.com/c1emon/gcommon/v2/service"
 	"golang.org/x/sync/errgroup"
 )
+
 func New(repo *service.ServiceRepo, logger *slog.Logger, serverOptions ...serverOption) (*Server, error) {
 	s, err := newServer(repo, logger)
 	if err != nil {

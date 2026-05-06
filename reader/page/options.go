@@ -1,6 +1,6 @@
 package page
 
-import "github.com/c1emon/gcommon/util"
+import "github.com/c1emon/gcommon/v2/util"
 
 type options struct {
 	offset         int

@@ -3,7 +3,7 @@ package page
 import (
 	"sync"
 
-	"github.com/c1emon/gcommon/util"
+	"github.com/c1emon/gcommon/v2/util"
 )
 
 // PageReadFn 用于读取`page`页的数据

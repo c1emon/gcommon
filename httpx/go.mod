@@ -1,9 +1,9 @@
-module github.com/c1emon/gcommon/httpx
+module github.com/c1emon/gcommon/httpx/v2
 
 go 1.25.0
 
 require (
-	github.com/c1emon/gcommon v0.0.0
+	github.com/c1emon/gcommon/v2 v2.0.0
 	github.com/imroc/req/v3 v3.57.0
 )
 
@@ -25,7 +25,7 @@ require (
 )
 
 replace (
-	github.com/c1emon/gcommon => ../
+	github.com/c1emon/gcommon/v2 => ../
 	// req/v3 pins quic-go in its go.mod; MVS can select a newer quic-go that breaks req's http3 build.
 	github.com/quic-go/quic-go => github.com/quic-go/quic-go v0.57.1
 )

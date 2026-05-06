@@ -1,4 +1,4 @@
-module github.com/c1emon/gcommon/gormx
+module github.com/c1emon/gcommon/gormx/v2
 
 go 1.25.0
 

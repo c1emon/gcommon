@@ -7,7 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/c1emon/gcommon/health"
+	"github.com/c1emon/gcommon/health/v2"
 )
 
 func TestHandler_okJSON(t *testing.T) {

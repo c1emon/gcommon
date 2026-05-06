@@ -6,10 +6,10 @@ import (
 	"os"
 	"testing"
 
-	"github.com/c1emon/gcommon/ginx"
-	"github.com/c1emon/gcommon/logx"
-	"github.com/c1emon/gcommon/server"
-	"github.com/c1emon/gcommon/service"
+	"github.com/c1emon/gcommon/ginx/v2"
+	"github.com/c1emon/gcommon/logx/v2"
+	"github.com/c1emon/gcommon/v2/server"
+	"github.com/c1emon/gcommon/v2/service"
 	"github.com/gin-gonic/gin"
 )
 

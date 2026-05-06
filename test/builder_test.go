@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/c1emon/gcommon/util"
+	"github.com/c1emon/gcommon/v2/util"
 )
 
 type baseParams struct {

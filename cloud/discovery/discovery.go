@@ -3,7 +3,7 @@ package discovery
 import (
 	"context"
 
-	"github.com/c1emon/gcommon/cloud"
+	"github.com/c1emon/gcommon/cloud/v2"
 )
 
 // Watcher is service watcher.

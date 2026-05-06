@@ -6,7 +6,7 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/c1emon/gcommon/health"
+	"github.com/c1emon/gcommon/health/v2"
 	hf "github.com/hellofresh/health-go/v5"
 )
 

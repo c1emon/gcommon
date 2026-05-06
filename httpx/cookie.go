@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 
-	"github.com/c1emon/gcommon/util"
+	"github.com/c1emon/gcommon/v2/util"
 )
 
 // CookieJarFactory creates a cookie jar for a newly built client.

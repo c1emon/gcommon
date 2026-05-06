@@ -1,4 +1,4 @@
-module github.com/c1emon/gcommon
+module github.com/c1emon/gcommon/v2
 
 go 1.25.0
 

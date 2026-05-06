@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/c1emon/gcommon/reader/tree"
+	"github.com/c1emon/gcommon/v2/reader/tree"
 )
 
 func build() *tree.Node[string] {

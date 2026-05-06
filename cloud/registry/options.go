@@ -3,8 +3,8 @@ package registry
 import (
 	"time"
 
-	"github.com/c1emon/gcommon/cloud"
-	"github.com/c1emon/gcommon/util"
+	"github.com/c1emon/gcommon/cloud/v2"
+	"github.com/c1emon/gcommon/v2/util"
 )
 
 type healthOption util.Option[healthOptions]

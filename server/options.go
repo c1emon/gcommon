@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/c1emon/gcommon/util"
+	"github.com/c1emon/gcommon/v2/util"
 )
 
 type serverOption util.Option[serverOptions]

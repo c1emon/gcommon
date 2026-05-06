@@ -679,7 +679,7 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 
-	"github.com/c1emon/gcommon/util"
+	"github.com/c1emon/gcommon/v2/util"
 )
 
 type CookieJarFactory func() *cookiejar.Jar
@@ -900,7 +900,7 @@ Create `httpx/redirect.go`:
 package httpx
 
 import (
-	"github.com/c1emon/gcommon/util"
+	"github.com/c1emon/gcommon/v2/util"
 	"github.com/imroc/req/v3"
 )
 
@@ -1030,7 +1030,7 @@ import (
 	"net/http/cookiejar"
 	"time"
 
-	"github.com/c1emon/gcommon/httpx"
+	"github.com/c1emon/gcommon/httpx/v2"
 	"golang.org/x/net/publicsuffix"
 )
 
@@ -1160,10 +1160,10 @@ Keep `internal/flow/iscsso` and `internal/flow/pms30` request methods calling `S
 Use a temporary local dependency replacement during validation:
 
 ```bash
-go mod edit -replace github.com/c1emon/gcommon/httpx=/Users/clemon/Workplace/gcommon/httpx
+go mod edit -replace github.com/c1emon/gcommon/httpx/v2=/Users/clemon/Workplace/gcommon/httpx
 go test ./internal/upstream ./internal/flow/iscsso ./internal/flow/pms30 ./internal/bootstrap
 go test ./...
-go mod edit -dropreplace github.com/c1emon/gcommon/httpx
+go mod edit -dropreplace github.com/c1emon/gcommon/httpx/v2
 ```
 
 Expected result: downstream tests pass and no local replace remains in the final diff unless the release strategy explicitly requires it.

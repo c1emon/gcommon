@@ -8,8 +8,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/c1emon/gcommon/errorx"
-	"github.com/c1emon/gcommon/logx"
+	"github.com/c1emon/gcommon/logx/v2"
+	"github.com/c1emon/gcommon/v2/errorx"
 	"github.com/gin-gonic/gin"
 )
 

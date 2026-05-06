@@ -1,7 +1,7 @@
 package memory
 
 import (
-	"github.com/c1emon/gcommon/cachex"
+	"github.com/c1emon/gcommon/cachex/v2"
 	"github.com/fanjindong/go-cache"
 )
 

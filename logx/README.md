@@ -20,7 +20,7 @@ import (
 	"context"
 	"log/slog"
 
-	"github.com/c1emon/gcommon/logx"
+	"github.com/c1emon/gcommon/logx/v2"
 )
 
 func main() {

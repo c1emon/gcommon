@@ -8,42 +8,42 @@ This repository is a **multi-module workspace**: the root module holds lightweig
 
 | Module path | Directory | Role |
 |-------------|-----------|------|
-| `github.com/c1emon/gcommon` | [`.`](.) | Core: `util`, `optional`, `errorx`, `data`, `stack`, `reader`, `service`, `server`, `pinger` |
-| `github.com/c1emon/gcommon/health` | [`health`](health/) | Health JSON ([hellofresh/health-go](https://github.com/hellofresh/health-go)); nested packages [`health/http`](health/http), [`health/gin`](health/gin) — see [`health/README.md`](health/README.md) |
-| `github.com/c1emon/gcommon/httpx` | [`httpx`](httpx/) | HTTP client (`imroc/req`) |
-| `github.com/c1emon/gcommon/ginx` | [`ginx`](ginx/) | Gin helpers |
-| `github.com/c1emon/gcommon/cloud` | [`cloud`](cloud/) | Service discovery / Consul |
-| `github.com/c1emon/gcommon/gormx` | [`gormx`](gormx/) | GORM helpers |
-| `github.com/c1emon/gcommon/cachex` | [`cachex`](cachex/) | Cache interfaces + memory backend |
-| `github.com/c1emon/gcommon/logx` | [`logx`](logx/) | Pure [`log/slog`](https://pkg.go.dev/log/slog) helpers (handlers, `Init` / `Default`, context attrs) |
-| `github.com/c1emon/gcommon/test` | [`test`](test/) | Integration tests (optional `INTEGRATION=1`) |
+| `github.com/c1emon/gcommon/v2` | [`.`](.) | Core: `util`, `optional`, `errorx`, `data`, `stack`, `reader`, `service`, `server`, `pinger` |
+| `github.com/c1emon/gcommon/health/v2` | [`health`](health/) | Health JSON ([hellofresh/health-go](https://github.com/hellofresh/health-go)); nested packages [`health/http`](health/http), [`health/gin`](health/gin) — see [`health/README.md`](health/README.md) |
+| `github.com/c1emon/gcommon/httpx/v2` | [`httpx`](httpx/) | HTTP client (`imroc/req`) |
+| `github.com/c1emon/gcommon/ginx/v2` | [`ginx`](ginx/) | Gin helpers |
+| `github.com/c1emon/gcommon/cloud/v2` | [`cloud`](cloud/) | Service discovery / Consul |
+| `github.com/c1emon/gcommon/gormx/v2` | [`gormx`](gormx/) | GORM helpers |
+| `github.com/c1emon/gcommon/cachex/v2` | [`cachex`](cachex/) | Cache interfaces + memory backend |
+| `github.com/c1emon/gcommon/logx/v2` | [`logx`](logx/) | Pure [`log/slog`](https://pkg.go.dev/log/slog) helpers (handlers, `Init` / `Default`, context attrs) |
+| `github.com/c1emon/gcommon/test/v2` | [`test`](test/) | Integration tests (optional `INTEGRATION=1`) |
 
 ## Using as a dependency
 
 Import only the paths you need. For example, only the root module:
 
 ```go
-import "github.com/c1emon/gcommon/util"
+import "github.com/c1emon/gcommon/v2/util"
 ```
 
 ```bash
-go get github.com/c1emon/gcommon@latest
+go get github.com/c1emon/gcommon/v2@v2.0.0
 ```
 
 HTTP client stack (root + httpx):
 
 ```bash
-go get github.com/c1emon/gcommon@latest github.com/c1emon/gcommon/httpx@latest
+go get github.com/c1emon/gcommon/v2@v2.0.0 github.com/c1emon/gcommon/httpx/v2@v2.3.0
 ```
 
 Health endpoints (nested module; import `health/http` or `health/gin`):
 
 ```bash
-go get github.com/c1emon/gcommon/health/http@latest
-# or: go get github.com/c1emon/gcommon/health/gin@latest
+go get github.com/c1emon/gcommon/health/v2/http@v2.2.0
+# or: go get github.com/c1emon/gcommon/health/v2/gin@v2.2.0
 ```
 
-Nested modules declare `require github.com/c1emon/gcommon v0.0.0` and a **local `replace => ../`** in-repo for development. For published versions, tag releases and align `require` versions across modules (or drop `replace` once tagged pseudo-versions exist on the proxy).
+Nested modules declare real released versions for internal dependencies and keep local `replace` directives for in-repo development. Published consumers resolve directory-prefixed module tags such as `httpx/v2.3.0` and `ginx/v2.2.0`.
 
 ## Contributing (this repo)
 
@@ -57,7 +57,7 @@ go test ./... \
   -count=1 -timeout 120s
 ```
 
-Avoid `go work sync` here: it tries to resolve `v0.0.0` from the network while submodules use `replace` for the monorepo layout.
+Avoid `go work sync` here: submodules use `replace` for the monorepo layout, while published consumers should resolve the released module versions.
 
 ## Requirements
 

@@ -8,12 +8,12 @@
 - 需要为登录、票据兑换、浏览器式会话创建相互隔离的 cookie jar
 - 需要按 profile 或单个 client 覆盖重试、业务错误映射、跳转策略
 
-> 说明：`Result/Pagination` 等 VO 已迁移到根目录 `vo` 包（`github.com/c1emon/gcommon/vo`）。
+> 说明：`Result/Pagination` 等 VO 已迁移到根目录 `vo` 包（`github.com/c1emon/gcommon/v2/vo`）。
 
 ## 安装
 
 ```bash
-go get github.com/c1emon/gcommon/httpx
+go get github.com/c1emon/gcommon/httpx/v2
 ```
 
 ## 快速开始
@@ -25,7 +25,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/c1emon/gcommon/httpx"
+	"github.com/c1emon/gcommon/httpx/v2"
 )
 
 func main() {
@@ -257,7 +257,7 @@ import (
 	"net/http/cookiejar"
 	"time"
 
-	"github.com/c1emon/gcommon/httpx"
+	"github.com/c1emon/gcommon/httpx/v2"
 	"golang.org/x/net/publicsuffix"
 )
 
@@ -326,7 +326,7 @@ factory.RegisterProfile("b",
 如果你的接口返回统一结构，推荐使用 `vo`：
 
 ```go
-import "github.com/c1emon/gcommon/vo"
+import "github.com/c1emon/gcommon/v2/vo"
 
 ok := vo.NewResultOK(map[string]string{"status": "ok"})
 msg := vo.NewMsgResult(4001, "bad request")

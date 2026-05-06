@@ -1,10 +1,10 @@
-module github.com/c1emon/gcommon/ginx
+module github.com/c1emon/gcommon/ginx/v2
 
 go 1.25.0
 
 require (
-	github.com/c1emon/gcommon v0.0.0
-	github.com/c1emon/gcommon/logx v0.0.0
+	github.com/c1emon/gcommon/logx/v2 v2.2.0
+	github.com/c1emon/gcommon/v2 v2.0.0
 	github.com/gin-gonic/gin v1.12.0
 )
 
@@ -43,6 +43,6 @@ require (
 )
 
 replace (
-	github.com/c1emon/gcommon => ../
-	github.com/c1emon/gcommon/logx => ../logx
+	github.com/c1emon/gcommon/logx/v2 => ../logx
+	github.com/c1emon/gcommon/v2 => ../
 )

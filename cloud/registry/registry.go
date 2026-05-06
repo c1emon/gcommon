@@ -1,7 +1,7 @@
 package registry
 
 import (
-	"github.com/c1emon/gcommon/cloud"
+	"github.com/c1emon/gcommon/cloud/v2"
 )
 
 // Registrar is service registrar.

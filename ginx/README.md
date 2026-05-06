@@ -35,8 +35,8 @@ Use debug logging only in trusted environments, because headers/body can include
   - `ErrorResponder()`
   - `Recovery(cfg.Logger)`
   - plus `DefaultEngineConfig.Middlewares` in-order (`cfg.Logger` must be non-nil).
-  - It also calls [`SetGinSlogWriters`](https://pkg.go.dev/github.com/c1emon/gcommon/ginx#SetGinSlogWriters) so [`gin.DefaultWriter`](https://pkg.go.dev/github.com/gin-gonic/gin#DefaultWriter) and [`gin.DefaultErrorWriter`](https://pkg.go.dev/github.com/gin-gonic/gin#DefaultErrorWriter) emit **one slog record per line** (info vs error) instead of raw stdout/stderr.
-- `SetGinSlogWriters(logger *slog.Logger)` assigns those Gin package globals; use it yourself if you build engines with [`NewBareEngine`](https://pkg.go.dev/github.com/c1emon/gcommon/ginx#NewBareEngine) but still want Gin’s internal/debug output routed through the same logger.
+  - It also calls [`SetGinSlogWriters`](https://pkg.go.dev/github.com/c1emon/gcommon/ginx/v2#SetGinSlogWriters) so [`gin.DefaultWriter`](https://pkg.go.dev/github.com/gin-gonic/gin#DefaultWriter) and [`gin.DefaultErrorWriter`](https://pkg.go.dev/github.com/gin-gonic/gin#DefaultErrorWriter) emit **one slog record per line** (info vs error) instead of raw stdout/stderr.
+- `SetGinSlogWriters(logger *slog.Logger)` assigns those Gin package globals; use it yourself if you build engines with [`NewBareEngine`](https://pkg.go.dev/github.com/c1emon/gcommon/ginx/v2#NewBareEngine) but still want Gin’s internal/debug output routed through the same logger.
 
 ### Example: Build a Default Engine
 
@@ -44,8 +44,8 @@ Use debug logging only in trusted environments, because headers/body can include
 import (
 	"log/slog"
 
-	"github.com/c1emon/gcommon/logx"
-	"github.com/c1emon/gcommon/ginx"
+	"github.com/c1emon/gcommon/logx/v2"
+	"github.com/c1emon/gcommon/ginx/v2"
 )
 
 logx.Init(logx.Config{

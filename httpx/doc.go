@@ -1,7 +1,7 @@
 // Package httpx provides a [ClientFactory]-centric wrapper around github.com/imroc/req/v3:
 // named profiles, shared defaults, and fresh caller-owned clients created from those
 // profiles. Shared response/result and pagination value objects are provided by
-// package github.com/c1emon/gcommon/vo. It also supports optional retry, rate
+// package github.com/c1emon/gcommon/v2/vo. It also supports optional retry, rate
 // limiting (golang.org/x/time/rate), browser impersonation profiles, cookie jars,
 // redirect policies, and opt-in JSON envelope error handling via interceptors.Error.
 // Use [InitDefaultClientFactory] and [GetDefaultClientFactory] for a package-level

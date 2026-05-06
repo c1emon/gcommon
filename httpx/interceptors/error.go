@@ -5,7 +5,7 @@ import (
 	"mime"
 	"strings"
 
-	"github.com/c1emon/gcommon/errorx"
+	"github.com/c1emon/gcommon/v2/errorx"
 	"github.com/imroc/req/v3"
 )
 

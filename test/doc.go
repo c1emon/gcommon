@@ -1,5 +1,5 @@
 // Package test contains integration and smoke tests that are skipped by default.
-// Module: github.com/c1emon/gcommon/test (see test/go.mod).
+// Module: github.com/c1emon/gcommon/test/v2 (see test/go.mod).
 //
 // Manual HTTP stack smoke test:
 //

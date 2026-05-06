@@ -4,8 +4,8 @@ package httphealth
 import (
 	"net/http"
 
-	"github.com/c1emon/gcommon/health"
-	"github.com/c1emon/gcommon/health/bridge"
+	"github.com/c1emon/gcommon/health/v2"
+	"github.com/c1emon/gcommon/health/v2/bridge"
 )
 
 // Handler returns an [http.Handler] that serves JSON health status including

@@ -6,7 +6,7 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/c1emon/gcommon/httpx/interceptors"
+	"github.com/c1emon/gcommon/httpx/v2/interceptors"
 	"github.com/imroc/req/v3"
 	"golang.org/x/time/rate"
 )

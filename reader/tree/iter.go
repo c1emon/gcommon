@@ -1,6 +1,6 @@
 package tree
 
-import "github.com/c1emon/gcommon/stack"
+import "github.com/c1emon/gcommon/v2/stack"
 
 type nodeIter[T any] struct {
 	stack *stack.Stack[*Node[T]]

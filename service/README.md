@@ -7,9 +7,9 @@
 
 | 能力 | 说明 |
 |------|------|
-| [`Service`](https://pkg.go.dev/github.com/c1emon/gcommon/service#Service) | 三个方法：`Name()`、`Start()`（同步启动）、`Stop(ctx)`（优雅停止） |
-| [`ServiceRepo`](https://pkg.go.dev/github.com/c1emon/gcommon/service#ServiceRepo) | 线程安全的注册表，`Register` 追加服务 |
-| [`ServiceRunner`](https://pkg.go.dev/github.com/c1emon/gcommon/service#ServiceRunner) | `Run(ctx, timeout)`：在 `ctx` 取消后用给定超时调用 `Stop`；由 `WrapDefault` 包装 `Service` 得到 |
+| [`Service`](https://pkg.go.dev/github.com/c1emon/gcommon/v2/service#Service) | 三个方法：`Name()`、`Start()`（同步启动）、`Stop(ctx)`（优雅停止） |
+| [`ServiceRepo`](https://pkg.go.dev/github.com/c1emon/gcommon/v2/service#ServiceRepo) | 线程安全的注册表，`Register` 追加服务 |
+| [`ServiceRunner`](https://pkg.go.dev/github.com/c1emon/gcommon/v2/service#ServiceRunner) | `Run(ctx, timeout)`：在 `ctx` 取消后用给定超时调用 `Stop`；由 `WrapDefault` 包装 `Service` 得到 |
 
 典型用法：实现 `Service`（例如包装 `http.Server`、队列消费者等），`Register` 进 repo，再交给 `server.New` 驱动（见下方「与 server 配合」）。
 
@@ -39,7 +39,7 @@ repo.Register(mySvc)
 
 ### `WrapDefault` 与 `Run`
 
-`server` 通过 `Services()` 拿到的是已包装好的 [`ServiceRunner`](https://pkg.go.dev/github.com/c1emon/gcommon/service#ServiceRunner)。`Run` 的行为要点：
+`server` 通过 `Services()` 拿到的是已包装好的 [`ServiceRunner`](https://pkg.go.dev/github.com/c1emon/gcommon/v2/service#ServiceRunner)。`Run` 的行为要点：
 
 1. 同步调用 `Start()`；失败则返回错误。
 2. 在后台等待 `ctx.Done()`（由上层 `server` 在关机时 `cancel`）。
@@ -56,8 +56,8 @@ import (
 	"context"
 	"log/slog"
 
-	"github.com/c1emon/gcommon/server"
-	"github.com/c1emon/gcommon/service"
+	"github.com/c1emon/gcommon/v2/server"
+	"github.com/c1emon/gcommon/v2/service"
 )
 
 type noopService struct{ name string }

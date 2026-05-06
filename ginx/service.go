@@ -8,8 +8,8 @@ import (
 	"net"
 	"net/http"
 
-	"github.com/c1emon/gcommon/logx"
-	"github.com/c1emon/gcommon/service"
+	"github.com/c1emon/gcommon/logx/v2"
+	"github.com/c1emon/gcommon/v2/service"
 	"github.com/gin-gonic/gin"
 )
 

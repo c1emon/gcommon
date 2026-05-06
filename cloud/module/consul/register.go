@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/c1emon/gcommon/cloud"
-	"github.com/c1emon/gcommon/cloud/registry"
+	"github.com/c1emon/gcommon/cloud/v2"
+	"github.com/c1emon/gcommon/cloud/v2/registry"
 	"github.com/hashicorp/consul/api"
 )
 

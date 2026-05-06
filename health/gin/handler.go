@@ -2,13 +2,13 @@
 package healthgin
 
 import (
-	"github.com/c1emon/gcommon/health"
-	"github.com/c1emon/gcommon/health/bridge"
+	"github.com/c1emon/gcommon/health/v2"
+	"github.com/c1emon/gcommon/health/v2/bridge"
 	"github.com/gin-gonic/gin"
 )
 
 // Handler returns a [gin.HandlerFunc] that serves the same JSON payload as
-// [github.com/c1emon/gcommon/health/http.Handler].
+// [github.com/c1emon/gcommon/health/v2/http.Handler].
 func Handler(cfg health.Config) (gin.HandlerFunc, error) {
 	h, err := bridge.NewHealth(cfg)
 	if err != nil {
