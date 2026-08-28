@@ -41,6 +41,12 @@ type browserRequestKindKey struct{}
 
 type browserPreviousURLKey struct{}
 
+type browserPageURLKey struct{}
+
+type browserStateUpdateKey struct{}
+
+type browserShouldUpdateStateKey struct{}
+
 type browserNavigationConfig struct {
 	referrerPolicy        ReferrerPolicy
 	xhrForJSON            bool
@@ -53,9 +59,9 @@ type browserNavigationState struct {
 	lastURL *url.URL
 }
 
-func installBrowserNavigation(c *req.Client, cfg *browserNavigationConfig) {
+func installBrowserNavigation(c *req.Client, cfg *browserNavigationConfig) *browserNavigationState {
 	if c == nil || cfg == nil {
-		return
+		return nil
 	}
 
 	state := &browserNavigationState{}
@@ -71,10 +77,16 @@ func installBrowserNavigation(c *req.Client, cfg *browserNavigationConfig) {
 	})
 	c.WrapRoundTripFunc(func(rt req.RoundTripper) req.RoundTripFunc {
 		return func(r *req.Request) (*req.Response, error) {
-			r.SetContext(contextWithPreviousBrowserURL(r.Context(), state.previous()))
-			state.apply(cfg, r, explicitHeadersFromContext(r.Context()), browserRequestKindFromContext(r.Context()))
+			prev := browserPageURLFromContext(r.Context())
+			if prev == nil {
+				prev = state.previous()
+			}
+			r.SetContext(contextWithPreviousBrowserURL(r.Context(), prev))
+			kind := state.apply(cfg, r, explicitHeadersFromContext(r.Context()), browserRequestKindFromContext(r.Context()), prev)
+			shouldUpdate := shouldUpdateBrowserNavigationState(r.Context(), kind)
+			r.SetContext(contextWithBrowserShouldUpdateState(r.Context(), shouldUpdate))
 			resp, err := rt.RoundTrip(r)
-			if resp != nil && resp.Response != nil && resp.Response.Request != nil {
+			if shouldUpdate && resp != nil && resp.Response != nil && resp.Response.Request != nil {
 				state.remember(resp.Response.Request.URL)
 			}
 			return resp, err
@@ -84,12 +96,16 @@ func installBrowserNavigation(c *req.Client, cfg *browserNavigationConfig) {
 		if resp == nil || resp.Request == nil {
 			return
 		}
+		if !browserShouldUpdateStateFromContext(resp.Request.Context()) {
+			return
+		}
 		prev, ok := previousBrowserURLFromContext(resp.Request.Context())
 		if !ok {
 			return
 		}
 		state.remember(prev)
 	})
+	return state
 }
 
 func contextWithExplicitHeaders(ctx context.Context, explicit map[string]struct{}) context.Context {
@@ -111,6 +127,27 @@ func contextWithPreviousBrowserURL(ctx context.Context, u *url.URL) context.Cont
 		ctx = context.Background()
 	}
 	return context.WithValue(ctx, browserPreviousURLKey{}, cloneURL(u))
+}
+
+func contextWithBrowserPageURL(ctx context.Context, u *url.URL) context.Context {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	return context.WithValue(ctx, browserPageURLKey{}, cloneURL(u))
+}
+
+func contextWithBrowserStateUpdate(ctx context.Context, enabled bool) context.Context {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	return context.WithValue(ctx, browserStateUpdateKey{}, enabled)
+}
+
+func contextWithBrowserShouldUpdateState(ctx context.Context, enabled bool) context.Context {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	return context.WithValue(ctx, browserShouldUpdateStateKey{}, enabled)
 }
 
 func explicitHeadersFromContext(ctx context.Context) map[string]struct{} {
@@ -137,6 +174,37 @@ func previousBrowserURLFromContext(ctx context.Context) (*url.URL, bool) {
 	return cloneURL(u), ok
 }
 
+func browserPageURLFromContext(ctx context.Context) *url.URL {
+	if ctx == nil {
+		return nil
+	}
+	u, _ := ctx.Value(browserPageURLKey{}).(*url.URL)
+	return cloneURL(u)
+}
+
+func browserStateUpdateFromContext(ctx context.Context) (bool, bool) {
+	if ctx == nil {
+		return false, false
+	}
+	enabled, ok := ctx.Value(browserStateUpdateKey{}).(bool)
+	return enabled, ok
+}
+
+func browserShouldUpdateStateFromContext(ctx context.Context) bool {
+	if ctx == nil {
+		return false
+	}
+	enabled, _ := ctx.Value(browserShouldUpdateStateKey{}).(bool)
+	return enabled
+}
+
+func shouldUpdateBrowserNavigationState(ctx context.Context, kind BrowserRequestKind) bool {
+	if enabled, ok := browserStateUpdateFromContext(ctx); ok {
+		return enabled
+	}
+	return kind == BrowserRequestNavigation
+}
+
 func (s *browserNavigationState) remember(u *url.URL) {
 	if s == nil {
 		return
@@ -155,9 +223,9 @@ func (s *browserNavigationState) previous() *url.URL {
 	return cloneURL(s.lastURL)
 }
 
-func (s *browserNavigationState) apply(cfg *browserNavigationConfig, r *req.Request, explicit map[string]struct{}, kind BrowserRequestKind) {
+func (s *browserNavigationState) apply(cfg *browserNavigationConfig, r *req.Request, explicit map[string]struct{}, kind BrowserRequestKind, prev *url.URL) BrowserRequestKind {
 	if s == nil || cfg == nil || r == nil || r.URL == nil {
-		return
+		return BrowserRequestAuto
 	}
 	defer deleteInternalBrowserRequestKindHeader(r.Headers)
 	if r.Headers == nil {
@@ -165,7 +233,6 @@ func (s *browserNavigationState) apply(cfg *browserNavigationConfig, r *req.Requ
 	}
 
 	current := r.URL
-	prev := s.previous()
 	setOrDeleteDynamicHeader(r.Headers, explicit, "Referer", cfg.refererFor(prev, current))
 	setDynamicHeader(r.Headers, explicit, "Sec-Fetch-Site", secFetchSite(prev, current))
 	if strings.EqualFold(r.Method, http.MethodPost) {
@@ -197,6 +264,7 @@ func (s *browserNavigationState) apply(cfg *browserNavigationConfig, r *req.Requ
 		setDynamicHeader(r.Headers, explicit, "Upgrade-Insecure-Requests", "1")
 		deleteDynamicHeader(r.Headers, explicit, "X-Requested-With")
 	}
+	return kind
 }
 
 func defaultBrowserNavigationConfig() *browserNavigationConfig {
@@ -274,6 +342,44 @@ func (r *Request) AsNavigation() *Request {
 	return r.WithBrowserRequestKind(BrowserRequestNavigation)
 }
 
+// SetBrowserCurrentURL seeds the client's current browser page URL used as the
+// Referer base for later browser-navigation requests. Invalid or non-absolute
+// URLs clear the stored page URL.
+func (c *Client) SetBrowserCurrentURL(rawURL string) *Client {
+	if c == nil || c.browserNavigation == nil {
+		return c
+	}
+	c.browserNavigation.remember(parseBrowserPageURL(rawURL))
+	return c
+}
+
+// WithBrowserPageURL uses rawURL as this request's browser page context without
+// changing the client's stored current page URL by itself. Invalid or
+// non-absolute URLs behave like no page context.
+func (r *Request) WithBrowserPageURL(rawURL string) *Request {
+	if r == nil || r.Request == nil {
+		return r
+	}
+	r.SetContext(contextWithBrowserPageURL(r.Context(), parseBrowserPageURL(rawURL)))
+	return r
+}
+
+// WithBrowserStateUpdate controls whether this request may update the client's
+// stored browser page URL after it is sent.
+func (r *Request) WithBrowserStateUpdate(enabled bool) *Request {
+	if r == nil || r.Request == nil {
+		return r
+	}
+	r.SetContext(contextWithBrowserStateUpdate(r.Context(), enabled))
+	return r
+}
+
+// WithoutBrowserNavigationStateUpdate prevents this request from updating the
+// client's stored browser page URL while still applying browser headers.
+func (r *Request) WithoutBrowserNavigationStateUpdate() *Request {
+	return r.WithBrowserStateUpdate(false)
+}
+
 func sameOrigin(a, b *url.URL) bool {
 	if a == nil || b == nil {
 		return false
@@ -302,6 +408,14 @@ func cloneURL(u *url.URL) *url.URL {
 	}
 	out := *u
 	return &out
+}
+
+func parseBrowserPageURL(rawURL string) *url.URL {
+	u, err := url.Parse(strings.TrimSpace(rawURL))
+	if err != nil || u == nil || u.Scheme == "" || u.Host == "" {
+		return nil
+	}
+	return u
 }
 
 func explicitHeaderKeys(h http.Header) map[string]struct{} {

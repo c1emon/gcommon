@@ -559,3 +559,204 @@ func TestBrowserNavigation_retryPreservesPreviousURLAndRequestKind(t *testing.T)
 		}
 	}
 }
+
+func TestBrowserNavigation_XHRDoesNotUpdateCurrentPage(t *testing.T) {
+	rec := newNavigationRecorder(t)
+	f := httpx.NewClientFactory()
+	f.RegisterProfile("browser",
+		httpx.WithBaseURL(rec.server.URL),
+		httpx.WithBrowserNavigation(),
+	)
+	c := f.MustNewClient("browser")
+
+	if _, err := c.Req().Get("/login"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := c.Req().AsXHR().Post("/preLogin/check"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := c.Req().AsNavigation().Post("/login"); err != nil {
+		t.Fatal(err)
+	}
+
+	if len(rec.seen) != 3 {
+		t.Fatalf("requests seen: want 3, got %d", len(rec.seen))
+	}
+	wantReferer := rec.server.URL + "/login"
+	if rec.seen[1].Referer != wantReferer {
+		t.Fatalf("XHR Referer: want %q, got %q", wantReferer, rec.seen[1].Referer)
+	}
+	if rec.seen[2].Referer != wantReferer {
+		t.Fatalf("final navigation Referer: want %q, got %q", wantReferer, rec.seen[2].Referer)
+	}
+}
+
+func TestBrowserNavigation_MultipleXHRsKeepFinalNavigationReferer(t *testing.T) {
+	rec := newNavigationRecorder(t)
+	f := httpx.NewClientFactory()
+	f.RegisterProfile("browser",
+		httpx.WithBaseURL(rec.server.URL),
+		httpx.WithBrowserNavigation(),
+	)
+	c := f.MustNewClient("browser")
+
+	if _, err := c.Req().AsNavigation().Get("/login"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := c.Req().AsXHR().Post("/preLogin/check"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := c.Req().AsXHR().Post("/accountEntrust/check"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := c.Req().AsNavigation().Post("/login"); err != nil {
+		t.Fatal(err)
+	}
+
+	if len(rec.seen) != 4 {
+		t.Fatalf("requests seen: want 4, got %d", len(rec.seen))
+	}
+	wantReferer := rec.server.URL + "/login"
+	for i := 1; i < len(rec.seen); i++ {
+		if rec.seen[i].Referer != wantReferer {
+			t.Fatalf("request %d Referer: want %q, got %q", i+1, wantReferer, rec.seen[i].Referer)
+		}
+	}
+}
+
+func TestBrowserNavigation_SetBrowserCurrentURLSetsRefererBase(t *testing.T) {
+	rec := newNavigationRecorder(t)
+	f := httpx.NewClientFactory()
+	f.RegisterProfile("browser",
+		httpx.WithBaseURL(rec.server.URL),
+		httpx.WithBrowserNavigation(),
+	)
+	c := f.MustNewClient("browser")
+	c.SetBrowserCurrentURL(rec.server.URL + "/login?from=seed")
+
+	if _, err := c.Req().AsXHR().Post("/preLogin/check"); err != nil {
+		t.Fatal(err)
+	}
+
+	if len(rec.seen) != 1 {
+		t.Fatalf("requests seen: want 1, got %d", len(rec.seen))
+	}
+	wantReferer := rec.server.URL + "/login?from=seed"
+	if rec.seen[0].Referer != wantReferer {
+		t.Fatalf("Referer: want %q, got %q", wantReferer, rec.seen[0].Referer)
+	}
+}
+
+func TestBrowserNavigation_CloneSetBrowserCurrentURLUpdatesSharedState(t *testing.T) {
+	rec := newNavigationRecorder(t)
+	f := httpx.NewClientFactory()
+	f.RegisterProfile("browser",
+		httpx.WithBaseURL(rec.server.URL),
+		httpx.WithBrowserNavigation(),
+	)
+	c := f.MustNewClient("browser")
+	clone := c.Clone()
+	clone.SetBrowserCurrentURL(rec.server.URL + "/login")
+
+	if _, err := c.Req().AsXHR().Post("/preLogin/check"); err != nil {
+		t.Fatal(err)
+	}
+
+	if len(rec.seen) != 1 {
+		t.Fatalf("requests seen: want 1, got %d", len(rec.seen))
+	}
+	wantReferer := rec.server.URL + "/login"
+	if rec.seen[0].Referer != wantReferer {
+		t.Fatalf("Referer: want %q, got %q", wantReferer, rec.seen[0].Referer)
+	}
+}
+
+func TestBrowserNavigation_WithBrowserPageURLSetsRequestRefererBase(t *testing.T) {
+	rec := newNavigationRecorder(t)
+	f := httpx.NewClientFactory()
+	f.RegisterProfile("browser",
+		httpx.WithBaseURL(rec.server.URL),
+		httpx.WithBrowserNavigation(),
+	)
+	c := f.MustNewClient("browser")
+
+	if _, err := c.Req().WithBrowserPageURL(rec.server.URL + "/login?request=1").AsXHR().Post("/preLogin/check"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := c.Req().AsNavigation().Get("/after"); err != nil {
+		t.Fatal(err)
+	}
+
+	if len(rec.seen) != 2 {
+		t.Fatalf("requests seen: want 2, got %d", len(rec.seen))
+	}
+	wantReferer := rec.server.URL + "/login?request=1"
+	if rec.seen[0].Referer != wantReferer {
+		t.Fatalf("request page Referer: want %q, got %q", wantReferer, rec.seen[0].Referer)
+	}
+	if rec.seen[1].Referer != "" {
+		t.Fatalf("next navigation Referer: want empty, got %q", rec.seen[1].Referer)
+	}
+}
+
+func TestBrowserNavigation_WithoutBrowserNavigationStateUpdate(t *testing.T) {
+	rec := newNavigationRecorder(t)
+	f := httpx.NewClientFactory()
+	f.RegisterProfile("browser",
+		httpx.WithBaseURL(rec.server.URL),
+		httpx.WithBrowserNavigation(),
+	)
+	c := f.MustNewClient("browser")
+
+	if _, err := c.Req().AsNavigation().Get("/login"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := c.Req().AsNavigation().WithoutBrowserNavigationStateUpdate().Get("/probe"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := c.Req().AsNavigation().Get("/submit"); err != nil {
+		t.Fatal(err)
+	}
+
+	if len(rec.seen) != 3 {
+		t.Fatalf("requests seen: want 3, got %d", len(rec.seen))
+	}
+	wantReferer := rec.server.URL + "/login"
+	if rec.seen[1].Referer != wantReferer {
+		t.Fatalf("probe Referer: want %q, got %q", wantReferer, rec.seen[1].Referer)
+	}
+	if rec.seen[2].Referer != wantReferer {
+		t.Fatalf("submit Referer: want %q, got %q", wantReferer, rec.seen[2].Referer)
+	}
+}
+
+func TestBrowserNavigation_AutoJSONUsesXHRHeadersAndDoesNotUpdateCurrentPage(t *testing.T) {
+	rec := newNavigationRecorder(t)
+	f := httpx.NewClientFactory()
+	f.RegisterProfile("browser",
+		httpx.WithBaseURL(rec.server.URL),
+		httpx.WithBrowserNavigation(),
+	)
+	c := f.MustNewClient("browser")
+
+	if _, err := c.Req().AsNavigation().Get("/login"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := c.Req().SetBodyJsonMarshal(map[string]string{"hello": "world"}).Post("/api"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := c.Req().AsNavigation().Get("/after"); err != nil {
+		t.Fatal(err)
+	}
+
+	if len(rec.seen) != 3 {
+		t.Fatalf("requests seen: want 3, got %d", len(rec.seen))
+	}
+	if rec.seen[1].SecFetchMode != "cors" {
+		t.Fatalf("auto JSON Sec-Fetch-Mode: want cors, got %q", rec.seen[1].SecFetchMode)
+	}
+	wantReferer := rec.server.URL + "/login"
+	if rec.seen[2].Referer != wantReferer {
+		t.Fatalf("after Referer: want %q, got %q", wantReferer, rec.seen[2].Referer)
+	}
+}

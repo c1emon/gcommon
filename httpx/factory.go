@@ -88,7 +88,8 @@ func (f *ClientFactory) NewClient(name string, opts ...ClientOption) (*Client, b
 	for _, opt := range opts {
 		opt.Apply(&o)
 	}
-	return &Client{Client: f.buildReqClient(name, &o), name: name}, true
+	reqClient, browserNavigation := f.buildReqClient(name, &o)
+	return &Client{Client: reqClient, name: name, browserNavigation: browserNavigation}, true
 }
 
 // MustNewClient creates a fresh client for a registered profile or panics.
@@ -112,8 +113,9 @@ func (f *ClientFactory) ProfileNames() []string {
 	return out
 }
 
-func (f *ClientFactory) buildReqClient(name string, o *clientRegisterOpts) *req.Client {
+func (f *ClientFactory) buildReqClient(name string, o *clientRegisterOpts) (*req.Client, *browserNavigationState) {
 	c := req.C()
+	var browserNavigation *browserNavigationState
 
 	if lg := o.effectiveLogger(f); lg != nil {
 		c.SetLogger(reqSlogLogger{log: lg})
@@ -178,13 +180,13 @@ func (f *ClientFactory) buildReqClient(name string, o *clientRegisterOpts) *req.
 	wrapReq := func(ri ReqInterceptor) {
 		h := ri
 		c.OnBeforeRequest(func(rc *req.Client, rq *req.Request) error {
-			return h(&Client{Client: rc, name: name}, &Request{rq})
+			return h(&Client{Client: rc, name: name, browserNavigation: browserNavigation}, &Request{rq})
 		})
 	}
 	wrapResp := func(ii RespInterceptor) {
 		h := ii
 		c.OnAfterResponse(func(rc *req.Client, rr *req.Response) error {
-			return h(&Client{Client: rc, name: name}, &Response{rr})
+			return h(&Client{Client: rc, name: name, browserNavigation: browserNavigation}, &Response{rr})
 		})
 	}
 
@@ -196,7 +198,7 @@ func (f *ClientFactory) buildReqClient(name string, o *clientRegisterOpts) *req.
 	}
 
 	if o.browserNavigation != nil {
-		installBrowserNavigation(c, o.browserNavigation)
+		browserNavigation = installBrowserNavigation(c, o.browserNavigation)
 	}
 
 	if lg := o.effectiveLogger(f); lg != nil {
@@ -224,5 +226,5 @@ func (f *ClientFactory) buildReqClient(name string, o *clientRegisterOpts) *req.
 		c.OnAfterResponse(interceptors.Error(strictJSONType))
 	}
 
-	return c
+	return c, browserNavigation
 }

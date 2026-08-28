@@ -15,7 +15,8 @@ type (
 // Client wraps a single imroc/req [req.Client], usually created by [ClientFactory.NewClient] or [ClientFactory.MustNewClient].
 type Client struct {
 	*req.Client
-	name string
+	name              string
+	browserNavigation *browserNavigationState
 }
 
 type Request struct {
@@ -37,9 +38,9 @@ func (c *Client) Clone() *Client {
 		return nil
 	}
 	if c.Client == nil {
-		return &Client{name: c.name}
+		return &Client{name: c.name, browserNavigation: c.browserNavigation}
 	}
-	return &Client{Client: c.Client.Clone(), name: c.name}
+	return &Client{Client: c.Client.Clone(), name: c.name, browserNavigation: c.browserNavigation}
 }
 
 func (c *Client) Req() *Request {
